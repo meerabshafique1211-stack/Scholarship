@@ -1,18 +1,23 @@
-// Real reference data (not scholarship claims): countries and field taxonomy.
-import type { Country } from "../lib/types";
+// Static reference data (not scholarship claims): countries, citizenships, field taxonomy.
+
+export interface Country {
+  code: string;     // ISO-2, matches Hipo's alpha_two_code
+  name: string;
+  hipoName: string; // country name as used by the Hipo dataset
+  slug: string;
+}
+
+const c = (code: string, name: string, hipoName = name): Country => ({
+  code, name, hipoName, slug: name.toLowerCase().replace(/\s+/g, "-"),
+});
 
 export const DESTINATIONS: Country[] = [
-  { code: "IT", name: "Italy", slug: "italy", currency: "EUR" },
-  { code: "DE", name: "Germany", slug: "germany", currency: "EUR" },
-  { code: "ES", name: "Spain", slug: "spain", currency: "EUR" },
-  { code: "FI", name: "Finland", slug: "finland", currency: "EUR" },
-  { code: "DK", name: "Denmark", slug: "denmark", currency: "DKK" },
-  { code: "SE", name: "Sweden", slug: "sweden", currency: "SEK" },
-  { code: "NL", name: "Netherlands", slug: "netherlands", currency: "EUR" },
-  { code: "FR", name: "France", slug: "france", currency: "EUR" },
-  { code: "IE", name: "Ireland", slug: "ireland", currency: "EUR" },
-  { code: "HU", name: "Hungary", slug: "hungary", currency: "HUF" },
-];
+  c("IT", "Italy"), c("ES", "Spain"), c("DE", "Germany"), c("FR", "France"),
+  c("FI", "Finland"), c("DK", "Denmark"), c("SE", "Sweden"), c("NL", "Netherlands"),
+  c("HU", "Hungary"), c("AT", "Austria"), c("BE", "Belgium"), c("IE", "Ireland"),
+  c("PT", "Portugal"), c("NO", "Norway"), c("PL", "Poland"), c("CH", "Switzerland"),
+  c("EE", "Estonia"), c("GB", "United Kingdom"),
+].sort((a, b) => a.name.localeCompare(b.name));
 
 export const CITIZENSHIPS: { code: string; name: string; demonym: string[] }[] = [
   { code: "PK", name: "Pakistan", demonym: ["pakistani"] },
@@ -39,13 +44,17 @@ export const FIELDS: { slug: string; label: string; synonyms: string[] }[] = [
   { slug: "computer-science", label: "Computer Science", synonyms: ["computer science", "cs", "computing", "software", "informatics"] },
   { slug: "ai", label: "Artificial Intelligence", synonyms: ["ai", "artificial intelligence", "machine learning", "ml"] },
   { slug: "data-science", label: "Data Science", synonyms: ["data science", "data analytics", "analytics"] },
-  { slug: "project-management", label: "Project Management", synonyms: ["project management", "pm"] },
+  { slug: "project-management", label: "Project Management", synonyms: ["project management"] },
   { slug: "business", label: "Business & Management", synonyms: ["business", "management", "mba", "finance"] },
   { slug: "engineering", label: "Engineering", synonyms: ["engineering", "mechanical", "electrical", "civil"] },
   { slug: "public-health", label: "Public Health", synonyms: ["public health", "health", "epidemiology"] },
   { slug: "economics", label: "Economics", synonyms: ["economics", "econ"] },
 ];
 
-export function countryByCode(code: string): Country | undefined {
-  return DESTINATIONS.find((c) => c.code === code);
+export function countryByCode(code: string | null | undefined): Country | undefined {
+  return DESTINATIONS.find((d) => d.code === code?.toUpperCase());
+}
+
+export function countryName(code: string): string {
+  return countryByCode(code)?.name ?? CITIZENSHIPS.find((x) => x.code === code)?.name ?? code;
 }

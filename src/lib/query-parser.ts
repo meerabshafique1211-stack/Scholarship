@@ -1,4 +1,4 @@
-import { CITIZENSHIPS, DESTINATIONS, FIELDS } from "../data/reference";
+import { CITIZENSHIPS, DESTINATIONS, FIELDS } from "./reference";
 import type { AppStatus, DegreeLevel, Filters, FundingFilter } from "./types";
 
 export interface ParsedQuery {
@@ -10,17 +10,16 @@ export interface ParsedQuery {
   minPercent: number | null;
   statuses: AppStatus[];
   intake: string | null;
-  residual: string[]; // words we couldn't interpret — used as free-text match
+  residual: string[]; // uninterpreted words, matched against names
 }
 
 const MONTHS = ["january","february","march","april","may","june","july","august","september","october","november","december"];
-const STOPWORDS = new Set(["in","for","the","a","an","and","of","to","at","with","students","student","scholarship","scholarships","programs","program","programme","degree","study","studies","university","universities","from","international","intake","show","me","find","funding","funded","me","i","want","course","courses","s"]);
+const STOPWORDS = new Set(["in","for","the","a","an","and","of","to","at","with","students","student","scholarship","scholarships","programs","program","programme","degree","study","studies","university","universities","from","international","intake","show","me","find","funding","funded","i","want","course","courses","s","verified"]);
 
 function esc(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-/** Removes the first whole-word match of `phrase` from `text`; returns [matched, newText]. */
 function take(text: string, phrase: string): [boolean, string] {
   const re = new RegExp(`(^|[^a-z0-9])${esc(phrase)}(?=$|[^a-z0-9])`);
   const m = re.exec(text);
@@ -33,7 +32,6 @@ export function parseQuery(input: string): ParsedQuery {
   let hit: boolean;
   const out: ParsedQuery = { countries: [], citizenship: null, degree: null, field: null, funding: null, minPercent: null, statuses: [], intake: null, residual: [] };
 
-  // Citizenship: "from <country>" or a demonym ("pakistani students")
   for (const c of [...CITIZENSHIPS, ...DESTINATIONS.map((d) => ({ code: d.code, name: d.name, demonym: [] as string[] }))]) {
     [hit, t] = take(t, `from ${c.name.toLowerCase()}`);
     if (hit) { out.citizenship = c.code; break; }
@@ -49,35 +47,30 @@ export function parseQuery(input: string): ParsedQuery {
     }
   }
 
-  // Destinations
   for (const d of DESTINATIONS) {
     [hit, t] = take(t, d.name.toLowerCase());
     if (hit) out.countries.push(d.code);
   }
 
-  // Funding
-  for (const [phrase, f] of [["fully funded", "fully_funded"], ["fully-funded", "fully_funded"], ["full tuition", "full_tuition"], ["100% tuition", "full_tuition"], ["no scholarship", "none"], ["partial", "other_partial"]] as const) {
+  for (const [phrase, f] of [["fully funded", "fully_funded"], ["fully-funded", "fully_funded"], ["full tuition", "full_tuition"], ["100% tuition", "full_tuition"], ["tuition waiver", "tuition_waiver"], ["fee waiver", "tuition_waiver"], ["no scholarship", "none"], ["partial", "other_partial"]] as const) {
     [hit, t] = take(t, phrase);
     if (hit) { out.funding = f; break; }
   }
   const pct = /(\d{1,3})\s*%/.exec(t);
   if (pct) {
-    const n = Math.min(100, parseInt(pct[1], 10));
-    out.minPercent = n;
+    out.minPercent = Math.min(100, parseInt(pct[1], 10));
     t = t.replace(pct[0], " ");
   }
 
-  // Status
-  for (const [phrase, s] of [["open now", "open"], ["apply now", "open"], ["currently open", "open"], ["upcoming", "upcoming"], ["open", "open"]] as const) {
+  for (const [phrase, s] of [["open now", "OPEN"], ["apply now", "OPEN"], ["currently open", "OPEN"], ["upcoming", "UPCOMING"], ["open", "OPEN"]] as const) {
     [hit, t] = take(t, phrase);
     if (hit && !out.statuses.includes(s)) out.statuses.push(s);
   }
 
-  // Degree
   for (const [words, level] of [
-    [["master's", "masters", "master", "msc", "m.sc", "ma", "mba", "meng", "postgraduate"], "master"],
-    [["bachelor's", "bachelors", "bachelor", "bsc", "b.sc", "undergraduate", "ba"], "bachelor"],
-    [["phd", "ph.d", "doctoral", "doctorate"], "phd"],
+    [["master's", "masters", "master", "msc", "m.sc", "ma", "mba", "meng", "postgraduate"], "MASTER"],
+    [["bachelor's", "bachelors", "bachelor", "bsc", "b.sc", "undergraduate", "ba"], "BACHELOR"],
+    [["phd", "ph.d", "doctoral", "doctorate"], "PHD"],
   ] as const) {
     for (const w of words) {
       [hit, t] = take(t, w);
@@ -86,7 +79,6 @@ export function parseQuery(input: string): ParsedQuery {
     if (out.degree) break;
   }
 
-  // Intake: "september 2027" | "sep 2027" | "2027"
   const monthRe = new RegExp(`(${MONTHS.map((m) => `${m}|${m.slice(0, 3)}`).join("|")})\\s+(20\\d{2})`);
   const mi = monthRe.exec(t);
   if (mi) {
@@ -98,28 +90,27 @@ export function parseQuery(input: string): ParsedQuery {
     if (yi) { out.intake = yi[2]; t = t.replace(yi[2], " "); }
   }
 
-  // Field (longest synonyms first so "project management" beats "management")
   const syn = FIELDS.flatMap((f) => f.synonyms.map((s) => ({ s, slug: f.slug }))).sort((a, b) => b.s.length - a.s.length);
   for (const { s, slug } of syn) {
     [hit, t] = take(t, s);
     if (hit) { out.field = slug; break; }
   }
 
-  out.residual = t.split(/[^a-z0-9]+/).filter((w) => w.length > 1 && !STOPWORDS.has(w));
+  out.residual = t.split(/[^a-z0-9à-ÿ]+/).filter((w) => w.length > 1 && !STOPWORDS.has(w));
   return out;
 }
 
-/** Merge a parsed query into filters. Parsed values only fill in; they never erase explicit choices. */
+/** Parsed values only fill in blanks; explicit filter choices win. */
 export function applyParsed(f: Filters, p: ParsedQuery): Filters {
   return {
     ...f,
     countries: p.countries.length ? Array.from(new Set([...f.countries, ...p.countries])) : f.countries,
-    citizenship: p.citizenship ?? f.citizenship,
-    degree: p.degree ?? f.degree,
-    field: p.field ?? f.field,
-    funding: p.funding ?? f.funding,
-    minPercent: p.minPercent ?? f.minPercent,
-    statuses: p.statuses.length ? p.statuses : f.statuses,
-    intake: p.intake ?? f.intake,
+    citizenship: f.citizenship ?? p.citizenship,
+    degree: f.degree ?? p.degree,
+    field: f.field ?? p.field,
+    funding: f.funding !== "all" ? f.funding : p.funding ?? "all",
+    minPercent: f.minPercent ?? p.minPercent,
+    statuses: f.statuses.length ? f.statuses : p.statuses,
+    intake: f.intake ?? p.intake,
   };
 }

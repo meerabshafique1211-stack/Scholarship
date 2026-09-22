@@ -2,17 +2,16 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { CITIZENSHIPS, DESTINATIONS, FIELDS } from "@/data/reference";
+import { CITIZENSHIPS, DESTINATIONS, FIELDS } from "@/lib/reference";
 
 const inline = "mx-1 inline-block max-w-full rounded-md border-b-2 border-route bg-route-tint px-2 py-0.5 font-serif text-route focus-visible:outline focus-visible:outline-2 focus-visible:outline-route";
 
-/** The hero: a sentence the student completes. Each blank is a real filter. */
 export function SentenceSearch() {
   const router = useRouter();
   const [citizenship, setCitizenship] = useState("PK");
-  const [degree, setDegree] = useState("master");
-  const [field, setField] = useState("computer-science");
-  const [country, setCountry] = useState("");
+  const [degree, setDegree] = useState("MASTER");
+  const [field, setField] = useState("");
+  const [country, setCountry] = useState("IT");
   const [funding, setFunding] = useState("all");
   const [q, setQ] = useState("");
 
@@ -36,9 +35,9 @@ export function SentenceSearch() {
         </select>
         and want a
         <select aria-label="Degree" className={inline} value={degree} onChange={(e) => setDegree(e.target.value)}>
-          <option value="bachelor">Bachelor&apos;s</option>
-          <option value="master">Master&apos;s</option>
-          <option value="phd">PhD</option>
+          <option value="BACHELOR">Bachelor&apos;s</option>
+          <option value="MASTER">Master&apos;s</option>
+          <option value="PHD">PhD</option>
         </select>
         in
         <select aria-label="Field" className={inline} value={field} onChange={(e) => setField(e.target.value)}>
@@ -63,7 +62,7 @@ export function SentenceSearch() {
       <div className="mt-6 flex max-w-2xl flex-col gap-2 sm:flex-row">
         <label htmlFor="home-q" className="sr-only">What do you want to study?</label>
         <input id="home-q" value={q} onChange={(e) => setQ(e.target.value)} maxLength={200}
-          placeholder="Or type it: AI Master's Finland September 2027"
+          placeholder="Or type: Computer Science scholarships in Italy"
           className="w-full rounded-md border border-ink/30 bg-paper px-4 py-3 text-ink placeholder:text-ink-faint focus-visible:outline focus-visible:outline-2 focus-visible:outline-route" />
         <button className="shrink-0 rounded-md bg-ink px-6 py-3 font-medium text-white hover:bg-ink-soft">Find opportunities</button>
       </div>

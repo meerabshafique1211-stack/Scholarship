@@ -1,64 +1,53 @@
-import type { AppStatus, Scholarship, VerificationStatus } from "./types";
+import type { AppStatus, ScholarshipView } from "./types";
 
-/** Records older than this are displayed as "Needs verification". */
-export const STALE_AFTER_DAYS = 90;
+export const REVERIFY_AFTER_DAYS = Number(process.env.REVERIFY_AFTER_DAYS ?? 30) || 30;
 
+const DAY = 86_400_000;
+function utcDay(d: Date): number {
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+}
 function day(iso: string): number {
   return Date.parse(iso.slice(0, 10) + "T00:00:00Z");
 }
 
 /**
- * Derives the displayed application status from dates.
- * Rules (from the brief):
- *  - OPEN requires an OFFICIAL opening/deadline window containing today AND an application URL.
- *  - UPCOMING requires an OFFICIAL future opening date.
- *  - EXPECTED is used whenever the only dates we have are EXPECTED — never promoted to official.
- *  - CLOSED requires an OFFICIAL deadline in the past.
- *  - UNKNOWN when no reliable date exists.
+ * Application status from OFFICIAL dates only (the database never stores inferred dates).
+ *  OPEN          official opening ≤ today ≤ official deadline
+ *  UPCOMING      official opening date is in the future
+ *  CLOSED        official deadline has passed
+ *  NOT_ANNOUNCED no official date published for this cycle
+ *  UNKNOWN       official source exists but status can't be determined
  */
-export function deriveStatus(s: Scholarship, today: Date = new Date()): AppStatus {
-  const t = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
-  const open = s.opening;
-  const dl = s.deadline;
-
-  if (dl && dl.kind === "official" && day(dl.date) < t) return "closed";
-
-  const officialOpen = open?.kind === "official" ? day(open.date) : null;
-  const officialDeadline = dl?.kind === "official" ? day(dl.date) : null;
-
-  if (officialOpen !== null && officialOpen > t) return "upcoming";
-
-  if (officialDeadline !== null && (officialOpen === null || officialOpen <= t)) {
-    // Opening date unknown but an official future deadline exists: treat as open only
-    // if we also have a direct application link; otherwise the cycle isn't confirmed open.
-    if (s.applicationUrl) return "open";
-    return officialOpen !== null ? "open" : "upcoming";
-  }
-
-  if (open?.kind === "expected" || dl?.kind === "expected") {
-    // An expected date that has already passed tells us nothing about the new cycle.
-    if (dl && day(dl.date) < t) return "unknown";
-    return "expected";
-  }
-
-  return "unknown";
-}
-
-export function effectiveVerification(
-  status: VerificationStatus,
-  lastVerifiedAt: string | null,
+export function deriveStatus(
+  s: Pick<ScholarshipView, "openingDate" | "deadline" | "statusUndetermined">,
   today: Date = new Date(),
-): VerificationStatus {
-  if (status !== "verified") return status;
-  if (!lastVerifiedAt) return "needs_verification";
-  const ageDays = (today.getTime() - day(lastVerifiedAt)) / 86_400_000;
-  return ageDays > STALE_AFTER_DAYS ? "needs_verification" : "verified";
+): AppStatus {
+  if (s.statusUndetermined) return "UNKNOWN";
+  const t = utcDay(today);
+  const open = s.openingDate ? day(s.openingDate) : null;
+  const dl = s.deadline ? day(s.deadline) : null;
+  if (dl !== null && dl < t) return "CLOSED";
+  if (open !== null && open > t) return "UPCOMING";
+  if (open !== null && dl !== null) return "OPEN";
+  if (open === null && dl === null) return "NOT_ANNOUNCED";
+  return "UNKNOWN"; // only one of the two dates is published
 }
 
-export const STATUS_META: Record<AppStatus, { label: string; short: string; tone: "seal" | "route" | "caution" | "dormant" }> = {
-  open: { label: "Open — apply now", short: "Open", tone: "seal" },
-  upcoming: { label: "Upcoming", short: "Upcoming", tone: "route" },
-  expected: { label: "Expected (not yet announced)", short: "Expected", tone: "caution" },
-  closed: { label: "Closed", short: "Closed", tone: "dormant" },
-  unknown: { label: "Information not available", short: "No date", tone: "dormant" },
+/** Apply Now: verified + official application URL + currently open. Nothing else. */
+export function canApplyNow(s: ScholarshipView, status: AppStatus): boolean {
+  return s.verificationStatus === "VERIFIED" && status === "OPEN" && Boolean(s.officialApplicationUrl);
+}
+
+export function needsReverification(lastVerifiedAt: string | Date | null, today: Date = new Date()): boolean {
+  if (!lastVerifiedAt) return true;
+  const t = typeof lastVerifiedAt === "string" ? Date.parse(lastVerifiedAt) : lastVerifiedAt.getTime();
+  return today.getTime() - t > REVERIFY_AFTER_DAYS * DAY;
+}
+
+export const STATUS_META: Record<AppStatus, { label: string; tone: "seal" | "route" | "caution" | "dormant" }> = {
+  OPEN: { label: "Open", tone: "seal" },
+  UPCOMING: { label: "Upcoming", tone: "route" },
+  CLOSED: { label: "Closed", tone: "dormant" },
+  NOT_ANNOUNCED: { label: "Not announced", tone: "caution" },
+  UNKNOWN: { label: "Status unclear", tone: "caution" },
 };

@@ -1,10 +1,11 @@
-import type { Scholarship } from "./types";
+import type { DegreeLevel, FundingType, ScholarshipView, SourceType } from "./types";
 
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
-/** "DD Month YYYY" as required by the brief. */
-export function formatDate(iso: string | null | undefined): string {
-  if (!iso) return "Information not available";
+/** "DD Month YYYY" */
+export function formatDate(v: string | Date | null | undefined): string {
+  if (!v) return "Not available";
+  const iso = typeof v === "string" ? v : v.toISOString();
   const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
   return `${String(d).padStart(2, "0")} ${MONTHS[m - 1]} ${y}`;
 }
@@ -14,35 +15,48 @@ export function formatIntake(v: string): string {
   return m ? `${MONTHS[m - 1]} ${y}` : String(y);
 }
 
-export function formatMoney(amount: number | null, currency: string | null): string {
-  if (amount === null || !currency) return "Not verified";
-  if (amount === 0) return "No tuition fee";
-  try {
-    return new Intl.NumberFormat("en-GB", { style: "currency", currency, maximumFractionDigits: 0 }).format(amount);
-  } catch {
-    return `${amount} ${currency}`;
-  }
+export function formatCount(n: number): string {
+  return new Intl.NumberFormat("en-GB").format(n);
 }
 
-/** Headline funding line, e.g. "100% tuition + €900/month stipend". */
-export function fundingHeadline(s: Scholarship): string {
+export const DEGREE_LABEL: Record<DegreeLevel, string> = { BACHELOR: "Bachelor's", MASTER: "Master's", PHD: "PhD" };
+
+export const FUNDING_LABEL: Record<FundingType, string> = {
+  FULLY_FUNDED: "Fully funded",
+  FULL_TUITION: "100% tuition",
+  PARTIAL: "Partial tuition",
+  TUITION_WAIVER: "Tuition waiver",
+  OTHER: "Other funding",
+};
+
+export const SOURCE_LABEL: Record<SourceType, string> = {
+  UNIVERSITY_OFFICIAL: "Official university page",
+  GOVERNMENT_OFFICIAL: "Official government portal",
+  ERASMUS_OFFICIAL: "Official Erasmus Mundus source",
+  SCHOLARSHIP_PROVIDER_OFFICIAL: "Official scholarship provider",
+};
+
+/** e.g. "100% tuition + €600/month stipend". Uses only stored, sourced values. */
+export function fundingHeadline(s: ScholarshipView): string {
   switch (s.fundingType) {
-    case "fully_funded":
-      return ["Fully funded", s.livingStipend ? `${s.livingStipend} stipend` : null].filter(Boolean).join(" + ");
-    case "full_tuition":
+    case "FULLY_FUNDED":
+      return s.livingStipend ? `Fully funded: 100% tuition + ${s.livingStipend} stipend` : "Fully funded";
+    case "FULL_TUITION":
       return "100% tuition";
-    case "partial":
-      return s.fundingPercentage !== null ? `${s.fundingPercentage}% tuition` : "Partial tuition (amount not verified)";
-    case "other":
-      return s.fundingAmountNote ?? "Other funding (amount not verified)";
+    case "PARTIAL":
+      return s.fundingPercentage !== null ? `${s.fundingPercentage}% of tuition` : "Partial tuition";
+    case "TUITION_WAIVER":
+      return s.fundingAmountText ?? "Tuition waiver";
+    case "OTHER":
+      return s.fundingAmountText ?? "Other funding";
   }
 }
 
-export function fundingLabel(t: Scholarship["fundingType"] | null): string {
-  if (t === null) return "No scholarship verified";
-  return { fully_funded: "Fully funded", full_tuition: "Full tuition", partial: "Partial", other: "Other funding" }[t];
-}
-
-export function fieldLabel(slug: string): string {
-  return slug.split("-").map((w) => (w === "ai" ? "AI" : w[0].toUpperCase() + w.slice(1))).join(" ");
+export function hostOf(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    return new URL(url).hostname.replace(/^www\./, "").toLowerCase();
+  } catch {
+    return null;
+  }
 }

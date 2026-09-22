@@ -1,73 +1,36 @@
-import { STATUS_META, effectiveVerification } from "@/lib/status";
-import { formatDate } from "@/lib/format";
-import type { AppStatus, VerificationStatus } from "@/lib/types";
+import { STATUS_META } from "@/lib/status";
+import { formatDate, SOURCE_LABEL } from "@/lib/format";
+import type { AppStatus, ScholarshipView } from "@/lib/types";
 
-const TONE: Record<string, string> = {
+const TONE = {
   seal: "bg-seal-tint text-seal border-seal/30",
   route: "bg-route-tint text-route border-route/30",
   caution: "bg-caution-tint text-caution border-caution/30",
   dormant: "bg-dormant-tint text-dormant border-dormant/30",
-};
+} as const;
+const DOT = { seal: "bg-seal", route: "bg-route", caution: "bg-caution", dormant: "bg-dormant" } as const;
 
-const DOT: Record<string, string> = { seal: "bg-seal", route: "bg-route", caution: "bg-caution", dormant: "bg-dormant" };
-
-export function StatusBadge({ status, long = false }: { status: AppStatus; long?: boolean }) {
+export function StatusBadge({ status }: { status: AppStatus }) {
   const m = STATUS_META[status];
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${TONE[m.tone]}`}>
       <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${DOT[m.tone]}`} />
-      {long ? m.label : m.short}
+      {m.label}
     </span>
   );
 }
 
-export function VerificationBadge({
-  status,
-  lastVerifiedAt,
-  publisher,
-  sourceUrl,
-}: {
-  status: VerificationStatus;
-  lastVerifiedAt: string | null;
-  publisher: string | null;
-  sourceUrl: string | null;
-}) {
-  const eff = effectiveVerification(status, lastVerifiedAt);
-  if (eff === "demo") {
-    return (
-      <p className="text-xs text-caution">
-        <span className="font-semibold">Demo record.</span> Fictional data for development, not a real opportunity.
-      </p>
-    );
-  }
-  if (eff === "verified") {
-    return (
-      <p className="text-xs text-seal">
-        <span className="font-semibold">✓ Officially verified</span>
-        {publisher && <> against {publisher}</>}, {formatDate(lastVerifiedAt)}.{" "}
-        {sourceUrl && (
-          <a className="underline underline-offset-2" href={sourceUrl} target="_blank" rel="noopener noreferrer">
-            View source
-          </a>
-        )}
-      </p>
-    );
-  }
+/** Shown on every public scholarship: status, last check date, source type and a link to the source. */
+export function VerifiedSource({ s }: { s: ScholarshipView }) {
   return (
-    <p className="text-xs text-caution">
-      <span className="font-semibold">⚠ Verification required.</span>{" "}
-      {lastVerifiedAt ? <>Last verified {formatDate(lastVerifiedAt)}; details may have changed.</> : <>Not yet checked against an official source.</>}
+    <p className="text-sm text-seal">
+      <span className="font-semibold">✓ Verified</span>
+      <span className="text-ink-soft">
+        {" "}Last checked {formatDate(s.lastVerifiedAt)}. Source: {SOURCE_LABEL[s.sourceType]} ({s.providerName}).{" "}
+      </span>
+      <a className="font-medium text-route underline underline-offset-2" href={s.sourceUrl} target="_blank" rel="noopener noreferrer">
+        View official source
+      </a>
     </p>
-  );
-}
-
-export function DemoBanner() {
-  return (
-    <div role="note" className="border-b border-caution/30 bg-caution-tint text-caution">
-      <p className="mx-auto max-w-page px-4 py-2 text-sm">
-        <span className="font-semibold">Development preview.</span> All universities and scholarships shown are fictional demo
-        records. No verified data is connected yet.
-      </p>
-    </div>
   );
 }
