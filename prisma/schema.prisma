@@ -1,0 +1,467 @@
+// Global Scholarship Finder — database schema
+// Core rule: nothing is presented as fact unless it links to a source and a verification date.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────── Enums ───────────────────────────
+
+enum Role {
+  STUDENT
+  EDITOR // can draft/edit records
+  ADMIN  // can publish, verify, archive
+}
+
+enum DegreeLevel {
+  BACHELOR
+  MASTER
+  PHD
+  DIPLOMA
+  OTHER
+}
+
+enum FundingType {
+  FULLY_FUNDED // tuition + living support (+ usually housing/insurance/travel)
+  FULL_TUITION // 100% tuition, living not fully covered
+  PARTIAL      // a percentage of tuition (25/50/75 etc.)
+  OTHER        // discount, merit award, need-based grant, etc.
+}
+
+// Stored status is advisory; the app derives the displayed status from dates (see src/lib/status.ts).
+enum ApplicationStatus {
+  OPEN
+  UPCOMING
+  EXPECTED
+  CLOSED
+  UNKNOWN
+}
+
+enum DateKind {
+  OFFICIAL // published by the awarding body for this cycle
+  EXPECTED // inferred from previous cycles — never shown as official
+}
+
+enum VerificationStatus {
+  VERIFIED           // checked against an authoritative source
+  NEEDS_VERIFICATION // was verified, but is stale or a change was reported
+  UNVERIFIED         // discovered, not yet checked
+  DEMO               // development data — never shown as real
+}
+
+enum SourceKind {
+  UNIVERSITY
+  GOVERNMENT
+  NATIONAL_PORTAL
+  ERASMUS
+  UNIVERSITY_API
+  APPROVED_FEED
+  SECONDARY // discovery only; cannot on its own verify a record
+}
+
+enum NationalityRule {
+  ALL_INTERNATIONAL
+  ONLY_LISTED
+  ALL_EXCEPT_LISTED
+  NOT_VERIFIED
+}
+
+enum InstitutionType {
+  PUBLIC
+  PRIVATE
+  OTHER
+}
+
+enum TrackerStatus {
+  INTERESTED
+  PREPARING
+  READY_TO_APPLY
+  APPLIED
+  INTERVIEW
+  ACCEPTED
+  REJECTED
+}
+
+enum DocumentKind {
+  CV
+  TRANSCRIPT
+  DEGREE_CERTIFICATE
+  LANGUAGE_TEST
+  PASSPORT
+  RECOMMENDATION
+  OTHER
+}
+
+enum PublishState {
+  DRAFT
+  PUBLISHED
+  ARCHIVED // past cycles stay visible under "Past opportunities"
+}
+
+// ─────────────────────── Reference data ───────────────────────
+
+model Country {
+  id                   String        @id @default(cuid())
+  isoCode              String        @unique @db.Char(2)
+  name                 String
+  slug                 String        @unique
+  currency             String?       @db.Char(3)
+  // Country-page facts are stored as sourced facts, never free text without a source
+  facts                CountryFact[]
+  universities         University[]
+  scholarships         Scholarship[]
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+}
+
+model CountryFact {
+  id             String   @id @default(cuid())
+  countryId      String
+  country        Country  @relation(fields: [countryId], references: [id], onDelete: Cascade)
+  topic          String   // "student_visa" | "post_study_work" | "living_cost" | "tuition_range" | ...
+  body           String
+  sourceUrl      String
+  lastVerifiedAt DateTime
+  @@index([countryId, topic])
+}
+
+model University {
+  id                 String          @id @default(cuid())
+  name               String
+  slug               String          @unique
+  countryId          String
+  country            Country         @relation(fields: [countryId], references: [id])
+  city               String
+  type               InstitutionType
+  foundedYear        Int?
+  officialUrl        String
+  internationalUrl   String?
+  logoUrl            String?
+  // Rankings are stored per publisher/year, never blended into an invented score
+  rankings           UniversityRanking[]
+  careerFacts        CareerFact[]
+  programs           Program[]
+  scholarships       Scholarship[]
+  saves              SavedUniversity[]
+  verificationStatus VerificationStatus @default(UNVERIFIED)
+  lastVerifiedAt     DateTime?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  @@index([countryId])
+}
+
+model UniversityRanking {
+  id           String     @id @default(cuid())
+  universityId String
+  university   University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  publisher    String     // e.g. "QS", "THE", "ARWU"
+  year         Int
+  rank         String     // stored as published, e.g. "201-250"
+  sourceUrl    String
+  @@unique([universityId, publisher, year])
+}
+
+// Evidence-based career data. `origin` separates university claims from labour-market data.
+model CareerFact {
+  id             String     @id @default(cuid())
+  universityId   String
+  university     University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  programId      String?
+  program        Program?   @relation(fields: [programId], references: [id], onDelete: Cascade)
+  kind           String     // "employment_rate" | "industry_partner" | "internship" | "career_service" | "job_title" | "post_study_work"
+  origin         String     // "official_university" | "external_labour_market"
+  value          String
+  sourceUrl      String
+  lastVerifiedAt DateTime
+  @@index([universityId, kind])
+}
+
+model Program {
+  id                   String        @id @default(cuid())
+  universityId         String
+  university           University    @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  name                 String
+  slug                 String
+  degreeLevel          DegreeLevel
+  fields               String[]      // normalised field slugs, e.g. ["computer-science","ai"]
+  durationMonths       Int?
+  englishTaught        Boolean?
+  intakes              String[]      // e.g. ["2027-09"]
+  tuitionPerYear       Decimal?      @db.Decimal(12, 2)
+  tuitionCurrency      String?       @db.Char(3)
+  applicationFee       Decimal?      @db.Decimal(10, 2)
+  officialUrl          String
+  applicationUrl       String?
+  // Admission requirements (structured where possible, free text where not)
+  minGpaNote           String?
+  languageRequirements String?
+  greRequired          Boolean?
+  workExperienceMonths Int?
+  requiredCourses      String[]      // for transcript → program matching
+  requiredDocuments    String[]      // drives the adaptive checklist
+  careerFacts          CareerFact[]
+  scholarships         Scholarship[]
+  verificationStatus   VerificationStatus @default(UNVERIFIED)
+  lastVerifiedAt       DateTime?
+  sourceUrl            String?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  @@unique([universityId, slug])
+  @@index([degreeLevel])
+}
+
+// ─────────────────────────── Scholarships ───────────────────────────
+
+model Scholarship {
+  id                   String             @id @default(cuid())
+  name                 String
+  slug                 String             @unique
+  universityId         String?            // null for government / national schemes
+  university           University?        @relation(fields: [universityId], references: [id])
+  programId            String?            // null = applies to several programs
+  program              Program?           @relation(fields: [programId], references: [id])
+  countryId            String
+  country              Country            @relation(fields: [countryId], references: [id])
+  provider             String             // awarding body as published
+  cycle                String             // e.g. "2027-28"
+  degreeLevels         DegreeLevel[]
+  fields               String[]
+
+  nationalityRule      NationalityRule    @default(NOT_VERIFIED)
+  nationalities        String[]           // ISO-2 codes, interpreted by nationalityRule
+
+  fundingType          FundingType
+  fundingPercentage    Int?               // % of tuition, 0–100
+  fundingAmountNote    String?            // as published, e.g. "€9,000/year"
+  tuitionCoverage      Boolean?           // null = not verified
+  livingStipend        String?            // amount/period as published, null = not verified
+  accommodation        Boolean?
+  healthInsurance      Boolean?
+  travelSupport        Boolean?
+  applicationFee       Decimal?           @db.Decimal(10, 2)
+
+  openingDate          DateTime?
+  openingDateKind      DateKind?
+  deadline             DateTime?
+  deadlineKind         DateKind?
+  intake               String?
+  storedStatus         ApplicationStatus  @default(UNKNOWN)
+
+  officialUrl          String             // scholarship information page
+  applicationUrl       String?            // REQUIRED before status can be OPEN
+  eligibilityNote      String?
+
+  verificationStatus   VerificationStatus @default(UNVERIFIED)
+  lastVerifiedAt       DateTime?
+  publishState         PublishState       @default(DRAFT)
+
+  requirements         ScholarshipRequirement[]
+  sources              ScholarshipSource[]
+  verificationLogs     VerificationLog[]
+  deadlines            Deadline[]
+  saves                SavedScholarship[]
+  applications         Application[]
+  motivationLetters    MotivationLetter[]
+
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  @@index([countryId, publishState])
+  @@index([fundingType])
+  @@index([deadline])
+}
+
+model ScholarshipRequirement {
+  id            String      @id @default(cuid())
+  scholarshipId String
+  scholarship   Scholarship @relation(fields: [scholarshipId], references: [id], onDelete: Cascade)
+  kind          String      // "min_gpa" | "language" | "work_experience" | "age" | "degree" | "document" | "other"
+  operator      String?     // ">=" | "<=" | "=" | "in"
+  value         String?     // machine-comparable where possible
+  text          String      // wording as published
+  sourceUrl     String
+}
+
+model ScholarshipSource {
+  id            String      @id @default(cuid())
+  scholarshipId String
+  scholarship   Scholarship @relation(fields: [scholarshipId], references: [id], onDelete: Cascade)
+  kind          SourceKind
+  url           String
+  publisher     String
+  retrievedAt   DateTime
+  isPrimary     Boolean     @default(false)
+}
+
+model VerificationLog {
+  id            String      @id @default(cuid())
+  scholarshipId String
+  scholarship   Scholarship @relation(fields: [scholarshipId], references: [id], onDelete: Cascade)
+  actorId       String
+  actor         User        @relation(fields: [actorId], references: [id])
+  action        String      // "verified" | "deadline_updated" | "funding_updated" | "closed" | "archived" | "flagged"
+  diff          Json?
+  sourceUrl     String?
+  note          String?
+  createdAt     DateTime    @default(now())
+  @@index([scholarshipId, createdAt])
+}
+
+model Deadline {
+  id            String      @id @default(cuid())
+  scholarshipId String
+  scholarship   Scholarship @relation(fields: [scholarshipId], references: [id], onDelete: Cascade)
+  label         String      // "Scholarship application", "University application", "Round 2"
+  date          DateTime
+  kind          DateKind
+  sourceUrl     String
+  @@index([date])
+}
+
+// ─────────────────────────── Users ───────────────────────────
+
+model User {
+  id                 String              @id @default(cuid())
+  email              String              @unique
+  name               String?
+  role               Role                @default(STUDENT)
+  profile            UserProfile?
+  documents          UserDocument[]
+  cvAssessments      CvAssessment[]
+  transcriptAssessments TranscriptAssessment[]
+  motivationLetters  MotivationLetter[]
+  savedUniversities  SavedUniversity[]
+  savedScholarships  SavedScholarship[]
+  applications       Application[]
+  verificationLogs   VerificationLog[]
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+}
+
+model UserProfile {
+  id                  String      @id @default(cuid())
+  userId              String      @unique
+  user                User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nationality         String?     @db.Char(2)
+  residenceCountry    String?     @db.Char(2)
+  birthYear           Int?
+  currentDegree       DegreeLevel?
+  currentUniversity   String?
+  major               String?
+  gpa                 Decimal?    @db.Decimal(4, 2)
+  gpaScale            Decimal?    @db.Decimal(4, 2)
+  graduationYear      Int?
+  jobTitle            String?
+  company             String?
+  experienceMonths    Int?
+  skills              String[]
+  ielts               Decimal?    @db.Decimal(3, 1)
+  toefl               Int?
+  pte                 Int?
+  duolingo            Int?
+  targetCountries     String[]
+  targetFields        String[]
+  targetDegree        DegreeLevel?
+  targetIntake        String?
+  budgetPerYear       Decimal?    @db.Decimal(12, 2)
+  budgetCurrency      String?     @db.Char(3)
+  fundingPreference   FundingType?
+  updatedAt           DateTime    @updatedAt
+}
+
+// Files live in private object storage; only the key is stored. Access via short-lived signed URLs.
+model UserDocument {
+  id          String       @id @default(cuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind        DocumentKind
+  storageKey  String       @unique
+  fileName    String
+  mimeType    String
+  sizeBytes   Int
+  sha256      String
+  uploadedAt  DateTime     @default(now())
+  cvAssessments         CvAssessment[]
+  transcriptAssessments TranscriptAssessment[]
+  @@index([userId, kind])
+}
+
+model CvAssessment {
+  id          String       @id @default(cuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documentId  String
+  document    UserDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  programId   String?
+  extracted   Json         // what was actually found in the CV
+  findings    Json         // strengths, gaps, missing info, ATS notes
+  model       String
+  createdAt   DateTime     @default(now())
+}
+
+model TranscriptAssessment {
+  id           String       @id @default(cuid())
+  userId       String
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documentId   String
+  document     UserDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  programId    String?
+  extracted    Json         // degree, CGPA, courses, credits, grades as read
+  comparison   Json         // matching / missing / needs-verification
+  equivalencyUncertain Boolean @default(true)
+  model        String
+  createdAt    DateTime     @default(now())
+}
+
+model MotivationLetter {
+  id            String       @id @default(cuid())
+  userId        String
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scholarshipId String?
+  scholarship   Scholarship? @relation(fields: [scholarshipId], references: [id])
+  programId     String?
+  title         String
+  body          String
+  qualityReport Json?
+  version       Int          @default(1)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model SavedUniversity {
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  universityId String
+  university   University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+  @@id([userId, universityId])
+}
+
+model SavedScholarship {
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scholarshipId String
+  scholarship   Scholarship @relation(fields: [scholarshipId], references: [id], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
+  @@id([userId, scholarshipId])
+}
+
+model Application {
+  id             String        @id @default(cuid())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scholarshipId  String?
+  scholarship    Scholarship?  @relation(fields: [scholarshipId], references: [id])
+  programId      String?
+  status         TrackerStatus @default(INTERESTED)
+  checklist      Json          // [{ item, required, done }]
+  notes          String?
+  remindAt       DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  @@index([userId, status])
+}
