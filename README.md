@@ -10,7 +10,7 @@ Find real universities and **verified** scholarships. Nothing fake is ever shown
 - There is no demo dataset and no fallback data anywhere in the code.
 
 ## Setup
-1. **Database:** Vercel → Project → Storage → create Postgres (e.g. Neon) → connect. This sets `DATABASE_URL`; the schema is applied during the next build.
+1. **Database (Supabase):** run `supabase/migrations/20260923000000_init.sql` once (SQL Editor → paste → Run). Then set `DATABASE_URL` in Vercel to the Supabase transaction-pooler string (port 6543) with `?pgbouncer=true&connection_limit=1`. The migration enables Row Level Security, so Supabase's public API keys can't read or write these tables.
 2. **Admin:** set `ADMIN_PASSWORD` and `AUTH_SECRET` (32+ random characters). Sign in at `/admin`.
 3. **Cron:** set `CRON_SECRET`. `/api/cron/sync` runs daily: it expires passed deadlines and syncs three countries' universities per run.
 4. **Optional:** `OPENALEX_API_KEY` (free at openalex.org/settings/api) for research indicators and cities.
