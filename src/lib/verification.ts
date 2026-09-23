@@ -84,6 +84,8 @@ export function verificationProblems(i: ScholarshipInput, universityDomain: stri
   if (!onDomain(i.sourceUrl, i.providerDomain)) p.push(`Source URL must be on the provider's official domain (${i.providerDomain}).`);
   if (!onDomain(i.officialScholarshipUrl, i.providerDomain) && !(universityDomain && onDomain(i.officialScholarshipUrl, universityDomain)))
     p.push("Official scholarship URL must be on the provider's or university's official domain.");
+  if (i.officialApplicationUrl && !onDomain(i.officialApplicationUrl, i.providerDomain) && !(universityDomain && onDomain(i.officialApplicationUrl, universityDomain)))
+    p.push("Application URL must be on the provider's or university's official domain. If applications go through an external portal, leave it empty; students will be sent to the official page instead.");
   if (i.sourceType === "UNIVERSITY_OFFICIAL") {
     if (!universityDomain) p.push("A university-official source needs the university's official domain (and the university must exist in the database).");
     else if (!(i.providerDomain === universityDomain || i.providerDomain.endsWith("." + universityDomain)))

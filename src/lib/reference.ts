@@ -12,11 +12,16 @@ const c = (code: string, name: string, hipoName = name): Country => ({
 });
 
 export const DESTINATIONS: Country[] = [
-  c("IT", "Italy"), c("ES", "Spain"), c("DE", "Germany"), c("FR", "France"),
-  c("FI", "Finland"), c("DK", "Denmark"), c("SE", "Sweden"), c("NL", "Netherlands"),
-  c("HU", "Hungary"), c("AT", "Austria"), c("BE", "Belgium"), c("IE", "Ireland"),
-  c("PT", "Portugal"), c("NO", "Norway"), c("PL", "Poland"), c("CH", "Switzerland"),
-  c("EE", "Estonia"), c("GB", "United Kingdom"),
+  c("AR", "Argentina"), c("AU", "Australia"), c("AT", "Austria"), c("BD", "Bangladesh"), c("BE", "Belgium"),
+  c("BR", "Brazil"), c("CA", "Canada"), c("CN", "China"), c("CZ", "Czech Republic"), c("DK", "Denmark"),
+  c("EG", "Egypt"), c("EE", "Estonia"), c("ET", "Ethiopia"), c("FI", "Finland"), c("FR", "France"),
+  c("DE", "Germany"), c("GH", "Ghana"), c("GR", "Greece"), c("HU", "Hungary"), c("IN", "India"),
+  c("ID", "Indonesia"), c("IE", "Ireland"), c("IT", "Italy"), c("JP", "Japan"), c("KE", "Kenya"),
+  c("LT", "Lithuania"), c("LV", "Latvia"), c("MY", "Malaysia"), c("NP", "Nepal"), c("NL", "Netherlands"),
+  c("NZ", "New Zealand"), c("NG", "Nigeria"), c("NO", "Norway"), c("PK", "Pakistan"), c("PL", "Poland"),
+  c("PT", "Portugal"), c("RO", "Romania"), c("SA", "Saudi Arabia"), c("SG", "Singapore"), c("KR", "South Korea", "Korea, Republic of"),
+  c("ES", "Spain"), c("LK", "Sri Lanka"), c("SE", "Sweden"), c("CH", "Switzerland"), c("TR", "Türkiye", "Turkiye"),
+  c("AE", "United Arab Emirates"), c("GB", "United Kingdom"), c("US", "United States"),
 ].sort((a, b) => a.name.localeCompare(b.name));
 
 export const CITIZENSHIPS: { code: string; name: string; demonym: string[] }[] = [

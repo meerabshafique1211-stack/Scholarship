@@ -17,6 +17,18 @@ Find real universities and **verified** scholarships. Nothing fake is ever shown
 
 Local: `cp .env.example .env`, fill it in, then `npm install && npm run dev`.
 
+## University search
+- `/universities`: live search by name (e.g. "Oxford") or country, 400 ms debounce, request cancellation, "Show more" pagination, and separate empty / error / "that's a field of study" states.
+- `/universities/[id]` (id = `<country>-<domain>`, e.g. `gb-ox.ac.uk`): official website and domains from Hipo, research data from OpenAlex (matched by domain; research output only), and verified scholarships only.
+- Browser → `/api/universities` → university service → Hipo (+ OpenAlex) → normalized records. The browser never calls external APIs.
+- Caching: country lists 7 days, name searches 1 day, OpenAlex lookups 30 days. Timeouts and at most 2 retries on 5xx/network errors; 429 is never retried. Per-IP limit of 60 requests/min on the API route.
+
+## Testing the real APIs
+```bash
+node scripts/provider-check.mjs                        # Hipo + OpenAlex directly (set OPENALEX_API_KEY to include OpenAlex)
+node scripts/smoke-test.mjs https://<your-site>.vercel.app   # the deployed internal API end to end
+```
+
 ## Architecture
 ```
 Official sources ──(admin verifies)──► Scholarship table ──► public pages (VERIFIED only)

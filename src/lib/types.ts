@@ -6,6 +6,7 @@ export type NationalityRule = "ALL" | "ONLY_LISTED" | "ALL_EXCEPT_LISTED";
 export type AppStatus = "OPEN" | "UPCOMING" | "CLOSED" | "NOT_ANNOUNCED" | "UNKNOWN";
 
 export interface UniversityView {
+  id: string;   // stable: "<country code>-<official domain>", e.g. "gb-ox.ac.uk"
   key: string;
   name: string;
   countryCode: string;
@@ -16,6 +17,8 @@ export interface UniversityView {
   officialDomain: string;
   openalexId: string | null;
   rorId: string | null;
+  institutionType: string | null;
+  domains: string[];
   worksCount: number | null;
   citedByCount: number | null;
   source: string;
@@ -67,6 +70,7 @@ export type FundingFilter = "all" | "fully_funded" | "full_tuition" | "75" | "50
 export interface Filters {
   q: string;
   countries: string[];
+  university: string | null; // official domain
   citizenship: string | null;
   degree: DegreeLevel | null;
   field: string | null;
@@ -78,6 +82,6 @@ export interface Filters {
 }
 
 export const EMPTY_FILTERS: Filters = {
-  q: "", countries: [], citizenship: null, degree: null, field: null, intake: null,
+  q: "", countries: [], university: null, citizenship: null, degree: null, field: null, intake: null,
   funding: "all", minPercent: null, statuses: [], page: 1,
 };

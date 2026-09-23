@@ -12,7 +12,7 @@ const FUNDING: { value: FundingFilter; label: string }[] = [
   { value: "25", label: "25%" },
   { value: "other_partial", label: "Other partial" },
   { value: "tuition_waiver", label: "Tuition waiver" },
-  { value: "none", label: "No scholarship" },
+  { value: "none", label: "No scholarship found" },
 ];
 
 const field = "w-full rounded-md border border-paper-line bg-paper px-2.5 py-2 text-sm text-ink";
@@ -22,6 +22,12 @@ export function FilterForm({ f }: { f: Filters }) {
   return (
     <form action="/search" method="get" className="space-y-6 text-sm">
       <input type="hidden" name="q" value={f.q} />
+      {f.university && (
+        <p className="text-ink">
+          <input type="hidden" name="university" value={f.university} />
+          Scholarships at <strong>{f.university}</strong>. <Link href="/search" className="text-route underline">Clear</Link>
+        </p>
+      )}
       <fieldset>
         <legend className="mb-2 font-semibold text-ink">Study in</legend>
         <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">

@@ -33,6 +33,7 @@ model University {
   logoUrl            String?
   openalexId         String?          @unique
   rorId              String?
+  institutionType    String?          // from OpenAlex, e.g. "education"
   worksCount         Int?
   citedByCount       Int?
   source             String           // "HIPO" | "MANUAL_OFFICIAL"

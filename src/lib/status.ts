@@ -33,9 +33,24 @@ export function deriveStatus(
   return "UNKNOWN"; // only one of the two dates is published
 }
 
-/** Apply Now: verified + official application URL + currently open. Nothing else. */
+function onDomain(url: string, domain: string | null | undefined): boolean {
+  if (!domain) return false;
+  try {
+    const h = new URL(url).hostname.replace(/^www\./, "").toLowerCase();
+    return h === domain || h.endsWith("." + domain);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Apply Now requires ALL of: verified record, official application URL, window open today
+ * (deadline not passed), and the URL is on the provider's or university's official domain.
+ */
 export function canApplyNow(s: ScholarshipView, status: AppStatus): boolean {
-  return s.verificationStatus === "VERIFIED" && status === "OPEN" && Boolean(s.officialApplicationUrl);
+  const url = s.officialApplicationUrl;
+  if (s.verificationStatus !== "VERIFIED" || status !== "OPEN" || !url) return false;
+  return onDomain(url, s.providerDomain) || onDomain(url, s.university?.officialDomain);
 }
 
 export function needsReverification(lastVerifiedAt: string | Date | null, today: Date = new Date()): boolean {

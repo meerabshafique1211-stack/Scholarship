@@ -1,9 +1,10 @@
-import type { Country } from "../reference";
+import { fetchJson, ProviderError } from "../http";
+import { countryByCode, type Country } from "../reference";
 import type { UniversityDataProvider, UniversityRecord } from "./types";
 
-// Hipo's hosted API is HTTP-only and Hipo asks larger projects not to lean on it heavily,
-// so results are cached server-side (see universities.ts) and the open GitHub copy of the
-// same dataset is used as a fallback when the API is unavailable.
+// The hosted Hipo API is free, keyless and HTTP-only, and Hipo asks bigger projects to
+// avoid heavy use. We only call it server-side, cache results, and fall back to the same
+// open dataset on GitHub (MIT) when the API is down or doesn't recognise a country name.
 const API = "http://universities.hipolabs.com/search";
 const DATASET = "https://raw.githubusercontent.com/Hipo/university-domains-list/master/world_universities_and_domains.json";
 
@@ -17,77 +18,71 @@ interface HipoRow {
 }
 
 let datasetPromise: Promise<HipoRow[]> | null = null;
-
-async function fromApi(c: Country): Promise<HipoRow[]> {
-  const res = await fetch(`${API}?country=${encodeURIComponent(c.hipoName)}`, {
-    cache: "no-store",
-    signal: AbortSignal.timeout(10_000),
-    headers: { accept: "application/json" },
-  });
-  if (!res.ok) throw new Error(`Hipo API ${res.status}`);
-  return (await res.json()) as HipoRow[];
-}
-
-async function fromDataset(): Promise<HipoRow[]> {
-  datasetPromise ??= fetch(DATASET, { cache: "no-store", signal: AbortSignal.timeout(25_000) }).then(async (r) => {
-    if (!r.ok) throw new Error(`Hipo dataset ${r.status}`);
-    return (await r.json()) as HipoRow[];
-  });
-  try {
-    return await datasetPromise;
-  } catch (e) {
+function dataset(): Promise<HipoRow[]> {
+  datasetPromise ??= fetchJson<HipoRow[]>("Hipo dataset", DATASET, { timeoutMs: 25_000, retries: 1 });
+  return datasetPromise.catch((e) => {
     datasetPromise = null;
     throw e;
-  }
+  });
 }
 
 export function cleanDomain(d: string): string {
-  return d.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "");
+  return d.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/[/?#].*$/, "");
 }
 
-function toRecord(r: HipoRow, c: Country, sourceUrl: string, fetchedAt: string): UniversityRecord | null {
-  const pages = (r.web_pages ?? []).filter(Boolean);
+const fold = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+function toRecord(r: HipoRow, sourceUrl: string, fetchedAt: string): UniversityRecord | null {
+  const code = r.alpha_two_code?.toUpperCase();
+  const pages = (r.web_pages ?? []).map((p) => p.trim()).filter((p) => /^https?:\/\//i.test(p));
   const domains = Array.from(new Set([...(r.domains ?? []), ...pages].map(cleanDomain).filter((d) => d.includes("."))));
-  if (!r.name?.trim() || domains.length === 0) return null;
+  if (!r.name?.trim() || !code || domains.length === 0) return null;
   return {
     name: r.name.trim().replace(/\s+/g, " "),
-    countryCode: c.code,
-    country: c.name,
+    countryCode: code,
+    country: countryByCode(code)?.name ?? r.country,
     state: r["state-province"]?.trim() || null,
     city: null,
     domains,
     officialDomain: domains[0],
-    officialWebsite: pages[0] ?? `https://${domains[0]}`,
+    officialWebsite: pages[0] ?? null, // only a URL the source actually lists
     source: "HIPO",
     sourceUrl,
-    openalexId: null,
-    rorId: null,
-    worksCount: null,
-    citedByCount: null,
-    researchSource: null,
-    researchSourceUrl: null,
+    openalexId: null, rorId: null, institutionType: null, worksCount: null, citedByCount: null,
+    researchSource: null, researchSourceUrl: null,
     fetchedAt,
   };
 }
 
+function toRecords(rows: HipoRow[], sourceUrl: string): UniversityRecord[] {
+  const at = new Date().toISOString();
+  return rows.map((r) => toRecord(r, sourceUrl, at)).filter((r): r is UniversityRecord => r !== null);
+}
+
 export const hipoProvider: UniversityDataProvider = {
   id: "HIPO",
-  async fetchByCountry(c) {
-    const fetchedAt = new Date().toISOString();
-    let rows: HipoRow[];
-    let sourceUrl: string;
+
+  async fetchByCountry(c: Country) {
+    const url = `${API}?country=${encodeURIComponent(c.hipoName)}`;
     try {
-      rows = await fromApi(c);
-      sourceUrl = `${API}?country=${encodeURIComponent(c.hipoName)}`;
-      if (rows.length === 0) throw new Error("empty API response");
-    } catch (err) {
-      console.warn(`[hipo] API failed for ${c.code}, using dataset:`, (err as Error).message);
-      rows = await fromDataset();
-      sourceUrl = DATASET;
+      const rows = (await fetchJson<HipoRow[]>("Hipo API", url)).filter((r) => r.alpha_two_code?.toUpperCase() === c.code);
+      if (rows.length) return toRecords(rows, url);
+      // Empty usually means the country name differs in Hipo's list (e.g. "Turkiye"); match by ISO code instead.
+    } catch (e) {
+      if (e instanceof ProviderError && e.kind === "rate_limited") console.warn("[hipo] rate limited; using dataset");
+      else console.warn("[hipo] API failed; using dataset:", (e as Error).message);
     }
-    return rows
-      .filter((r) => r.alpha_two_code?.toUpperCase() === c.code)
-      .map((r) => toRecord(r, c, sourceUrl, fetchedAt))
-      .filter((r): r is UniversityRecord => r !== null);
+    return toRecords((await dataset()).filter((r) => r.alpha_two_code?.toUpperCase() === c.code), DATASET);
+  },
+
+  async searchByName(name: string) {
+    const url = `${API}?name=${encodeURIComponent(name)}`;
+    try {
+      return toRecords(await fetchJson<HipoRow[]>("Hipo API", url), url);
+    } catch (e) {
+      console.warn("[hipo] name search failed; using dataset:", (e as Error).message);
+    }
+    const q = fold(name);
+    return toRecords((await dataset()).filter((r) => fold(r.name ?? "").includes(q)), DATASET);
   },
 };

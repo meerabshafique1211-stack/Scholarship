@@ -3,14 +3,13 @@ import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
 import { FilterForm } from "@/components/FilterForm";
 import { ScholarshipCard } from "@/components/ScholarshipCard";
-import { UniversityList } from "@/components/UniversityList";
+import { UniversityCard } from "@/components/UniversityCard";
 import { filterScholarships } from "@/lib/filter";
 import { applyParsed, parseQuery } from "@/lib/query-parser";
 import { countryName } from "@/lib/reference";
 import { countByUniversityDomain, listPublicScholarships } from "@/lib/scholarships";
-import { getUniversities, normalizeName } from "@/lib/universities";
+import { searchUniversities } from "@/lib/universities";
 import { paramsToFilters, withParams } from "@/lib/url-state";
-import type { UniversityView } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Search verified scholarships and universities" };
 
@@ -24,20 +23,18 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   const pub = await listPublicScholarships();
   const scholarships = f.funding === "none" ? [] : filterScholarships(pub.items, f, parsed.residual);
 
-  // Universities: only for the selected countries; name-matched against leftover query words.
-  const uniResults = await Promise.all(f.countries.map((c) => getUniversities(c)));
-  const uniError = uniResults.find((r) => r.error)?.error ?? null;
-  const words = parsed.residual.map(normalizeName).filter(Boolean);
-  const allUnis: UniversityView[] = uniResults
-    .flatMap((r) => r.items)
-    .filter((u) => words.every((w) => normalizeName(`${u.name} ${u.city ?? ""} ${u.officialDomain}`).includes(w)));
-  const pages = Math.max(1, Math.ceil(allUnis.length / PAGE_SIZE));
-  const page = Math.min(f.page, pages);
-  const unis = allUnis.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  // University section: separate from scholarship search. Name words left over after the
+  // parser removed field/degree/funding terms are matched against institution names only.
+  const nameQuery = parsed.residual.join(" ");
+  const uniCountry = f.countries.length === 1 ? f.countries[0] : null;
+  const uni = uniCountry || nameQuery.length >= 2
+    ? await searchUniversities({ query: nameQuery, countryCode: uniCountry, page: f.page, pageSize: PAGE_SIZE })
+    : null;
+  const pages = uni ? Math.max(1, Math.ceil(uni.total / PAGE_SIZE)) : 1;
+  const page = uni?.page ?? 1;
   const counts = countByUniversityDomain(pub.items);
 
-  const base = { q: raw.q, country: f.countries, citizenship: f.citizenship, degree: f.degree, field: f.field, intake: f.intake, funding: f.funding === "all" ? null : f.funding, min: f.minPercent ? String(f.minPercent) : null, status: f.statuses };
-  const countryLabel = f.countries.map(countryName).join(", ");
+  const base = { q: raw.q, country: f.countries, university: f.university, citizenship: f.citizenship, degree: f.degree, field: f.field, intake: f.intake, funding: f.funding === "all" ? null : f.funding, min: f.minPercent ? String(f.minPercent) : null, status: f.statuses };
 
   return (
     <div className="mx-auto max-w-page px-4 pb-16 pt-6">
@@ -91,18 +88,26 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
 
           <section aria-labelledby="uni-heading">
             <h2 id="uni-heading" className="font-serif text-2xl text-ink">
-              {f.countries.length ? `${allUnis.length} universities in ${countryLabel}` : "Universities"}
+              {uni && !uni.error ? `${uni.total} universit${uni.total === 1 ? "y" : "ies"}${uniCountry ? ` in ${countryName(uniCountry)}` : ""}${nameQuery ? ` matching “${nameQuery}”` : ""}` : "Universities"}
             </h2>
-            {!f.countries.length ? (
-              <p className="mt-2 text-ink-soft">Choose one or more countries to list their universities.</p>
-            ) : uniError && allUnis.length === 0 ? (
-              <p className="mt-2 text-caution">{uniError}</p>
+            {!uni ? (
+              <p className="mt-2 text-ink-soft">
+                {f.countries.length > 1 ? "Choose a single country to list its universities, or " : "Choose a country to list its universities, or "}
+                <Link href="/universities" className="text-route underline">search universities by name</Link>.
+              </p>
+            ) : uni.error ? (
+              <p role="alert" className="mt-2 text-caution">{uni.error}</p>
+            ) : uni.total === 0 ? (
+              <div className="mt-3 rounded-md border border-dashed border-ink/25 p-5">
+                <p className="font-medium text-ink">No verified universities found for your search.</p>
+                <p className="mt-1 text-sm text-ink-soft">Try another university name or country.</p>
+              </div>
             ) : (
               <>
-                <p className="mt-1 text-sm text-ink-soft">
-                  From the open Hipo university list{words.length ? `, matching “${parsed.residual.join(" ")}”` : ""}. Listing a university does not imply it offers a scholarship.
-                </p>
-                <div className="mt-4"><UniversityList items={unis} scholarshipCounts={counts} /></div>
+                <p className="mt-1 text-sm text-ink-soft">From the open Hipo university list. Listing a university does not imply it offers a scholarship.</p>
+                <div className="mt-3 border-t border-paper-line">
+                  {uni.items.map((u) => <UniversityCard key={u.id} u={u} scholarshipCount={u.domains.reduce((n, d) => n + (counts.get(d) ?? 0), 0)} />)}
+                </div>
                 {pages > 1 && (
                   <nav aria-label="Pages" className="mt-4 flex items-center justify-between text-sm">
                     {page > 1 ? <Link className="text-route underline" href={withParams("/search", { ...base, page: String(page - 1) })}>Previous</Link> : <span />}

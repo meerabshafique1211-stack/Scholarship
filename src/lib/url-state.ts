@@ -26,6 +26,7 @@ export function paramsToFilters(p: Params): Filters {
     ...EMPTY_FILTERS,
     q: (one(p, "q") ?? "").slice(0, 200),
     countries: all(p, "country").map((c) => c.toUpperCase()).filter((c) => /^[A-Z]{2}$/.test(c)),
+    university: one(p, "university")?.toLowerCase().match(/^[a-z0-9.-]+\.[a-z]{2,}$/)?.[0] ?? null,
     citizenship: one(p, "citizenship")?.toUpperCase().match(/^[A-Z]{2}$/)?.[0] ?? null,
     degree: degree && DEGREES.includes(degree) ? degree : null,
     field: one(p, "field")?.slice(0, 60) ?? null,

@@ -1,6 +1,6 @@
 import type { Country } from "../reference";
 
-/** A university as reported by a data provider, with the source of every field group. */
+/** A university as reported by a provider. Every field group carries its source. */
 export interface UniversityRecord {
   name: string;
   countryCode: string;
@@ -9,27 +9,30 @@ export interface UniversityRecord {
   city: string | null;
   domains: string[];
   officialDomain: string;
-  officialWebsite: string | null;
+  officialWebsite: string | null; // exactly as returned by the source, never generated
   source: "HIPO" | "MANUAL_OFFICIAL";
   sourceUrl: string;
   openalexId: string | null;
   rorId: string | null;
+  institutionType: string | null;
   worksCount: number | null;
   citedByCount: number | null;
   researchSource: "OPENALEX" | null;
   researchSourceUrl: string | null;
-  fetchedAt: string;
+  fetchedAt: string; // when WE retrieved it from the source
 }
 
-/** Base list of institutions (names, countries, domains). Add new providers here. */
+/** Base institution lists. Add a new source by implementing this and registering it in universities.ts. */
 export interface UniversityDataProvider {
   id: string;
   fetchByCountry(country: Country): Promise<UniversityRecord[]>;
+  searchByName(name: string): Promise<UniversityRecord[]>;
 }
 
-/** Adds fields (research metadata, identifiers, city) to existing records. */
+/** Adds identifiers / research metadata to existing records. */
 export interface UniversityEnrichmentProvider {
   id: string;
   enabled(): boolean;
   enrich(country: Country, records: UniversityRecord[]): Promise<UniversityRecord[]>;
+  lookup(record: UniversityRecord): Promise<UniversityRecord>;
 }

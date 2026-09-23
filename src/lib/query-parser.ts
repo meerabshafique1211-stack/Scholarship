@@ -32,6 +32,7 @@ export function parseQuery(input: string): ParsedQuery {
   let hit: boolean;
   const out: ParsedQuery = { countries: [], citizenship: null, degree: null, field: null, funding: null, minPercent: null, statuses: [], intake: null, residual: [] };
 
+  // 1) "from X" or a demonym ("Pakistani") → citizenship
   for (const c of [...CITIZENSHIPS, ...DESTINATIONS.map((d) => ({ code: d.code, name: d.name, demonym: [] as string[] }))]) {
     [hit, t] = take(t, `from ${c.name.toLowerCase()}`);
     if (hit) { out.citizenship = c.code; break; }
@@ -42,14 +43,21 @@ export function parseQuery(input: string): ParsedQuery {
         [hit, t] = take(t, d);
         if (hit) { out.citizenship = c.code; break outer; }
       }
+    }
+  }
+  // 2) any other country name ("in Italy", "Pakistan") → where to study
+  for (const d of DESTINATIONS) {
+    [hit, t] = take(t, d.name.toLowerCase());
+    if (!hit && d.hipoName !== d.name) [hit, t] = take(t, d.hipoName.toLowerCase());
+    if (hit) out.countries.push(d.code);
+  }
+  // 3) citizenship-only countries not in the destination list
+  if (!out.citizenship) {
+    for (const c of CITIZENSHIPS) {
+      if (DESTINATIONS.some((d) => d.code === c.code)) continue;
       [hit, t] = take(t, c.name.toLowerCase());
       if (hit) { out.citizenship = c.code; break; }
     }
-  }
-
-  for (const d of DESTINATIONS) {
-    [hit, t] = take(t, d.name.toLowerCase());
-    if (hit) out.countries.push(d.code);
   }
 
   for (const [phrase, f] of [["fully funded", "fully_funded"], ["fully-funded", "fully_funded"], ["full tuition", "full_tuition"], ["100% tuition", "full_tuition"], ["tuition waiver", "tuition_waiver"], ["fee waiver", "tuition_waiver"], ["no scholarship", "none"], ["partial", "other_partial"]] as const) {

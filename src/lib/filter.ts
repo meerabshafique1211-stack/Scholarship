@@ -51,6 +51,7 @@ export function filterScholarships(list: ScholarshipView[], f: Filters, residual
       if (s.verificationStatus !== "VERIFIED") return false;
       if (status === "CLOSED") return false;
       if (f.countries.length && !f.countries.includes(s.countryCode)) return false;
+      if (f.university && s.university?.officialDomain !== f.university) return false;
       if (f.degree && !s.degreeLevels.includes(f.degree)) return false;
       if (f.field && s.studyFields.length > 0 && !s.studyFields.includes(f.field)) return false;
       if (f.intake && !(s.intake ?? "").startsWith(f.intake)) return false;
