@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { CoveragePips } from "./CoveragePips";
 import { StatusBadge, VerifiedSource } from "./Badges";
 import { eligibleFor } from "@/lib/filter";
@@ -22,7 +23,7 @@ export function ScholarshipCard({ s, status, citizenship }: { s: ScholarshipView
       <div className="mt-2 grid gap-4 md:grid-cols-[1fr_14rem]">
         <div className="min-w-0">
           <p className="text-xs text-ink-soft">{FUNDING_LABEL[s.fundingType]}, provided by {s.providerName}</p>
-          <h3 className="mt-0.5 font-serif text-xl leading-snug text-ink">{s.name}</h3>
+          <h3 className="mt-0.5 font-serif text-xl leading-snug text-ink"><Link href={`/scholarships/${s.id}`} className="hover:text-route">{s.name}</Link></h3>
           <p className="mt-1 text-lg font-semibold text-ink">{fundingHeadline(s)}</p>
           <div className="mt-3"><CoveragePips s={s} /></div>
 
@@ -48,7 +49,7 @@ export function ScholarshipCard({ s, status, citizenship }: { s: ScholarshipView
           {s.deadline ? (
             <div><p className="text-ink-soft">Official deadline</p><p className="font-semibold text-ink">{formatDate(s.deadline)}</p></div>
           ) : (
-            <p className="font-semibold text-ink">{s.cycle} deadline not announced</p>
+            <p className="font-semibold text-ink">{s.cycle} application not announced</p>
           )}
           {status === "UPCOMING" && s.openingDate && <p className="text-ink-soft">Opens {formatDate(s.openingDate)}</p>}
           {s.previousCycleDeadline && (

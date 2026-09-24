@@ -41,6 +41,7 @@ export const scholarshipInput = z.object({
   healthInsurance: optBool,
   travelSupport: optBool,
   applicationFee: optStr,
+  otherBenefits: optStr,
   cycle: z.string().trim().min(4, "Cycle is required, e.g. 2027-28").max(20),
   intake: z.preprocess(emptyToNull, z.string().regex(/^20\d{2}(-\d{2})?$/, "Intake as YYYY or YYYY-MM").nullable()),
   openingDate: optDate,

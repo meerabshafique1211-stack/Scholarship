@@ -1,17 +1,19 @@
-// Best-effort per-IP limiter for public API routes (per server instance).
-// Protects the upstream providers from bursts; provider results are cached anyway.
-const WINDOW_MS = 60_000;
-const LIMIT = 60;
-const hits = new Map<string, { count: number; reset: number }>();
+// Best-effort per-IP limiter (per server instance). Protects providers and paid APIs from bursts.
+const buckets = new Map<string, { count: number; reset: number }>();
 
-export function rateLimit(ip: string): { ok: boolean; retryAfter: number } {
+export function rateLimit(ip: string, limit = 60, windowMs = 60_000, scope = "default"): { ok: boolean; retryAfter: number } {
   const now = Date.now();
-  const h = hits.get(ip);
+  const key = `${scope}:${ip}`;
+  const h = buckets.get(key);
   if (!h || h.reset < now) {
-    hits.set(ip, { count: 1, reset: now + WINDOW_MS });
-    if (hits.size > 5000) for (const [k, v] of hits) if (v.reset < now) hits.delete(k);
+    buckets.set(key, { count: 1, reset: now + windowMs });
+    if (buckets.size > 5000) for (const [k, v] of buckets) if (v.reset < now) buckets.delete(k);
     return { ok: true, retryAfter: 0 };
   }
   h.count++;
-  return h.count > LIMIT ? { ok: false, retryAfter: Math.ceil((h.reset - now) / 1000) } : { ok: true, retryAfter: 0 };
+  return h.count > limit ? { ok: false, retryAfter: Math.ceil((h.reset - now) / 1000) } : { ok: true, retryAfter: 0 };
+}
+
+export function clientIp(headers: Headers): string {
+  return headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
 }

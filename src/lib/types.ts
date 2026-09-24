@@ -50,6 +50,7 @@ export interface ScholarshipView {
   healthInsurance: boolean | null;
   travelSupport: boolean | null;
   applicationFee: string | null;
+  otherBenefits: string | null;
   cycle: string;
   intake: string | null;
   openingDate: string | null;

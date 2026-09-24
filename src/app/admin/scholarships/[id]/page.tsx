@@ -34,6 +34,7 @@ export default async function EditScholarship({ params, searchParams }: { params
         Status: <strong>{r.verificationStatus.replace("_", " ").toLowerCase()}</strong>. Last verified {formatDate(r.lastVerifiedAt)}.
         {r.verificationStatus === "VERIFIED" && needsReverification(r.lastVerifiedAt) && <span className="text-caution"> Needs re-verification.</span>}
         {r.verificationStatus === "VERIFIED" ? " Visible to the public." : " Not visible to the public."}
+        {r.sourceLastCheckedAt && <> Source page last auto-checked {formatDate(r.sourceLastCheckedAt)}.</>}
       </p>
       <div className="mt-6 grid gap-10 xl:grid-cols-[1fr_20rem]">
         <ScholarshipForm
@@ -44,7 +45,7 @@ export default async function EditScholarship({ params, searchParams }: { params
             nationalities: r.nationalities.join(", "), eligibilityText: r.eligibilityText, fundingType: r.fundingType,
             fundingPercentage: r.fundingPercentage?.toString() ?? "", fundingAmountText: r.fundingAmountText ?? "", tuitionCoverage: yn(r.tuitionCoverage),
             livingStipend: r.livingStipend ?? "", accommodation: yn(r.accommodation), healthInsurance: yn(r.healthInsurance), travelSupport: yn(r.travelSupport),
-            applicationFee: r.applicationFee ?? "", cycle: r.cycle, intake: r.intake ?? "", openingDate: ymd(r.openingDate), deadline: ymd(r.deadline),
+            applicationFee: r.applicationFee ?? "", otherBenefits: r.otherBenefits ?? "", cycle: r.cycle, intake: r.intake ?? "", openingDate: ymd(r.openingDate), deadline: ymd(r.deadline),
             statusUndetermined: r.statusUndetermined, previousCycleLabel: r.previousCycleLabel ?? "", previousCycleDeadline: ymd(r.previousCycleDeadline),
             officialScholarshipUrl: r.officialScholarshipUrl, officialApplicationUrl: r.officialApplicationUrl ?? "", sourceUrl: r.sourceUrl,
             sourceType: r.sourceType, verificationNotes: r.verificationNotes ?? "",

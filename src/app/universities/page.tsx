@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { UniversitySearch } from "@/components/UniversitySearch";
 import { countryByCode, DESTINATIONS } from "@/lib/reference";
 import { searchUniversities } from "@/lib/universities";
 
-export const metadata: Metadata = { title: "Find universities", description: "Search real universities worldwide by name or country." };
+export const metadata: Metadata = { title: "Find universities", description: "Search real universities worldwide by name or country, with official websites.", alternates: { canonical: "/universities" } };
 
 export default async function UniversitiesPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const sp = await searchParams;
@@ -22,6 +23,12 @@ export default async function UniversitiesPage({ searchParams }: { searchParams:
       <div className="mt-6">
         <UniversitySearch countries={DESTINATIONS} initialQuery={q} initialCountry={country} initial={initial} />
       </div>
+      <nav aria-label="Browse by country" className="mt-12">
+        <h2 className="font-serif text-2xl text-ink">Browse by country</h2>
+        <ul className="mt-3 grid grid-cols-2 gap-x-6 sm:grid-cols-3 lg:grid-cols-6">
+          {DESTINATIONS.map((c) => <li key={c.code} className="border-b border-paper-line"><Link href={`/universities/${c.slug}`} className="block py-2 text-ink hover:text-route">{c.name}</Link></li>)}
+        </ul>
+      </nav>
     </div>
   );
 }

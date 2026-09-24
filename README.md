@@ -9,6 +9,15 @@ Find real universities and **verified** scholarships. Nothing fake is ever shown
 - Deadlines are never inferred. Unannounced cycles show "2027-28 deadline not announced"; previous-cycle dates are labelled as history.
 - There is no demo dataset and no fallback data anywhere in the code.
 
+## Features
+- Real university search (Hipo) with OpenAlex research enrichment, country pages (`/universities/italy`) and detail pages.
+- Verified-only scholarships with detail pages (`/scholarships/[id]`), country pages (`/scholarships/italy`), open-now and upcoming lists.
+- Tools: CV assessment, transcript check, motivation-letter assistant, application tracker (`/tools`). Uploads are processed in memory and never stored.
+- Guides (`/guides`), About, Contact, Privacy and Terms pages; sitemap.xml, robots.txt, canonical URLs, JSON-LD.
+- AdSense-ready components that render nothing until real IDs are configured; `/ads.txt` generated from the publisher ID.
+- Daily cron: expires passed deadlines, re-checks official pages (changes go back to human review), refreshes universities.
+- `/api/health` reports configuration and database status without revealing secrets.
+
 ## Setup
 1. **Database (Supabase):** run `supabase/migrations/20260923000000_init.sql` once (SQL Editor → paste → Run). Then set `DATABASE_URL` in Vercel to the Supabase transaction-pooler string (port 6543) with `?pgbouncer=true&connection_limit=1`. The migration enables Row Level Security, so Supabase's public API keys can't read or write these tables.
 2. **Admin:** set `ADMIN_PASSWORD` and `AUTH_SECRET` (32+ random characters). Sign in at `/admin`.

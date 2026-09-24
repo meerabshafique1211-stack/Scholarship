@@ -31,6 +31,7 @@ export function toView(r: Row): ScholarshipView {
     healthInsurance: r.healthInsurance,
     travelSupport: r.travelSupport,
     applicationFee: r.applicationFee,
+    otherBenefits: r.otherBenefits,
     cycle: r.cycle,
     intake: r.intake,
     openingDate: iso(r.openingDate),
@@ -72,4 +73,16 @@ export function countByUniversityDomain(items: ScholarshipView[]): Map<string, n
   const m = new Map<string, number>();
   for (const s of items) if (s.university) m.set(s.university.officialDomain, (m.get(s.university.officialDomain) ?? 0) + 1);
   return m;
+}
+
+/** One verified, public scholarship by id (null when missing, unverified or demo). */
+export async function getPublicScholarship(id: string): Promise<ScholarshipView | null> {
+  if (!hasDb() || !/^[a-z0-9]{10,40}$/i.test(id)) return null;
+  try {
+    const r = await db().scholarship.findFirst({ where: { ...PUBLIC_WHERE, id }, include: withUniversity });
+    return r ? toView(r) : null;
+  } catch (e) {
+    console.error("[scholarships] read failed:", e);
+    return null;
+  }
 }

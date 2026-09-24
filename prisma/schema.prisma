@@ -122,6 +122,7 @@ model Scholarship {
   healthInsurance        Boolean?
   travelSupport          Boolean?
   applicationFee         String?
+  otherBenefits          String?                 // as published, e.g. "language course"
 
   cycle                  String                  // e.g. "2027-28"
   intake                 String?                 // e.g. "2027-09"
@@ -138,7 +139,9 @@ model Scholarship {
 
   verificationStatus     ScholarshipVerification @default(NEEDS_VERIFICATION)
   verificationNotes      String?
-  lastVerifiedAt         DateTime?
+  lastVerifiedAt         DateTime?               // set ONLY by a human verification
+  sourceContentHash      String?                 // fingerprint of the official page at verification time
+  sourceLastCheckedAt    DateTime?               // last automatic check (never counts as verification)
   isDemo                 Boolean                 @default(false) // must be false for public results
 
   sources                ScholarshipSource[]
@@ -148,6 +151,7 @@ model Scholarship {
 
   @@index([verificationStatus, isDemo, countryCode])
   @@index([deadline])
+  @@index([sourceLastCheckedAt])
 }
 
 // Every official page checked for a scholarship, with the date it was checked.

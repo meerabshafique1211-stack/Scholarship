@@ -8,6 +8,7 @@ import { requireAdmin } from "@/lib/admin-session";
 import { db, hasDb } from "@/lib/db";
 import { countryByCode } from "@/lib/reference";
 import { syncCountry } from "@/lib/universities";
+import { fingerprintPage } from "@/lib/source-monitor";
 import { scholarshipInput, structuralProblems, verificationProblems } from "@/lib/verification";
 
 export type FormState = { errors: string[] } | null;
@@ -65,12 +66,17 @@ export async function saveScholarship(_: FormState, fd: FormData): Promise<FormS
   }
 
   let status: "VERIFIED" | "NEEDS_VERIFICATION";
+  let sourceHash: string | null = null;
   if (intent === "verify") {
     const problems = verificationProblems(i, universityDomain);
     const today = new Date().toISOString().slice(0, 10);
     if (i.deadline && i.deadline < today) problems.push("The official deadline has passed. Mark as expired, or enter the new cycle's official dates.");
     if (problems.length) return { errors: problems };
     status = "VERIFIED";
+    // Fingerprint the official page now, so the daily job can detect later changes.
+    const fp = await fingerprintPage(i.sourceUrl);
+    if (!fp.ok) return { errors: [`Could not load the source URL for fingerprinting (${fp.reason}). Check the link, then verify again.`] };
+    sourceHash = fp.hash;
   } else {
     const problems = structuralProblems(i);
     if (problems.length) return { errors: problems };
@@ -84,13 +90,13 @@ export async function saveScholarship(_: FormState, fd: FormData): Promise<FormS
     fundingPercentage: i.fundingType === "FULL_TUITION" || i.fundingType === "FULLY_FUNDED" ? 100 : i.fundingPercentage,
     fundingAmountText: i.fundingAmountText, tuitionCoverage: i.tuitionCoverage, livingStipend: i.livingStipend,
     accommodation: i.accommodation, healthInsurance: i.healthInsurance, travelSupport: i.travelSupport,
-    applicationFee: i.applicationFee, cycle: i.cycle, intake: i.intake,
+    applicationFee: i.applicationFee, otherBenefits: i.otherBenefits, cycle: i.cycle, intake: i.intake,
     openingDate: toDate(i.openingDate), deadline: toDate(i.deadline), statusUndetermined: i.statusUndetermined,
     previousCycleLabel: i.previousCycleLabel, previousCycleDeadline: toDate(i.previousCycleDeadline),
     officialScholarshipUrl: i.officialScholarshipUrl, officialApplicationUrl: i.officialApplicationUrl,
     sourceUrl: i.sourceUrl, sourceType: i.sourceType, verificationStatus: status, verificationNotes: i.verificationNotes,
     isDemo: false,
-    ...(status === "VERIFIED" ? { lastVerifiedAt: new Date() } : {}),
+    ...(status === "VERIFIED" ? { lastVerifiedAt: new Date(), sourceContentHash: sourceHash, sourceLastCheckedAt: new Date() } : {}),
   };
 
   const rec = id ? await db().scholarship.update({ where: { id }, data }) : await db().scholarship.create({ data });

@@ -8,7 +8,7 @@ export interface FormDefaults {
   name?: string; universityDomain?: string; providerName?: string; providerDomain?: string; countryCode?: string;
   degreeLevels?: string[]; studyFields?: string; nationalityRule?: string; nationalities?: string; eligibilityText?: string;
   fundingType?: string; fundingPercentage?: string; fundingAmountText?: string; tuitionCoverage?: string; livingStipend?: string;
-  accommodation?: string; healthInsurance?: string; travelSupport?: string; applicationFee?: string; cycle?: string; intake?: string;
+  accommodation?: string; healthInsurance?: string; travelSupport?: string; applicationFee?: string; otherBenefits?: string; cycle?: string; intake?: string;
   openingDate?: string; deadline?: string; statusUndetermined?: boolean; previousCycleLabel?: string; previousCycleDeadline?: string;
   officialScholarshipUrl?: string; officialApplicationUrl?: string; sourceUrl?: string; sourceType?: string; verificationNotes?: string;
 }
@@ -113,6 +113,7 @@ export function ScholarshipForm({ d, countries }: { d: FormDefaults; countries: 
         <YesNo name="healthInsurance" value={d.healthInsurance} text="Health insurance?" />
         <YesNo name="travelSupport" value={d.travelSupport} text="Travel support?" />
         <label className={label}>Application fee<input name="applicationFee" defaultValue={d.applicationFee} className={input} placeholder="e.g. None / €30" /></label>
+        <label className={`${label} sm:col-span-2`}>Other benefits (as published)<input name="otherBenefits" defaultValue={d.otherBenefits} className={input} placeholder="e.g. free language course" /></label>
       </fieldset>
 
       <fieldset className="grid gap-4 sm:grid-cols-3">

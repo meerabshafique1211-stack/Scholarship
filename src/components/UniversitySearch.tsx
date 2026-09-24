@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { UniversityCard } from "./UniversityCard";
+import { ResponsiveAd } from "./ads/AdSlot";
 import type { UniversityView } from "@/lib/types";
 
 interface ApiResult {
@@ -94,6 +95,7 @@ export function UniversitySearch({
         {state.kind === "idle" && <p className="text-ink-soft">Type at least 2 letters of a university name, or choose a country.</p>}
 
         {state.kind === "loading" && (
+          <p className="mb-3 text-ink-soft">Finding universities...</p>
           <ul className="space-y-3" aria-label="Loading">
             {[0, 1, 2].map((i) => <li key={i} className="h-16 animate-pulse rounded-md bg-paper-tint" />)}
           </ul>
@@ -125,7 +127,12 @@ export function UniversitySearch({
           <>
             <p className="text-sm text-ink-soft">{state.data.total} {state.data.total === 1 ? "university" : "universities"} found</p>
             <div className="mt-2 border-t border-paper-line">
-              {state.items.map((u) => <UniversityCard key={u.id} u={u} />)}
+              {state.items.map((u, i) => (
+                <div key={u.id}>
+                  <UniversityCard u={u} />
+                  {i === 5 && state.items.length > 8 && <ResponsiveAd />}
+                </div>
+              ))}
             </div>
             {state.items.length < state.data.total && (
               <button type="button" disabled={loadingMore} onClick={() => run(query, country, state.data.page + 1)}

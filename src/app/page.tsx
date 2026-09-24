@@ -1,4 +1,7 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { AdBanner } from "@/components/ads/AdSlot";
+import { GUIDES } from "@/lib/guides";
 import { SentenceSearch } from "@/components/SentenceSearch";
 import { StatusBadge } from "@/components/Badges";
 import { DESTINATIONS } from "@/lib/reference";
@@ -9,6 +12,7 @@ import { countryName } from "@/lib/reference";
 import { EMPTY_FILTERS } from "@/lib/types";
 
 export const revalidate = 600;
+export const metadata: Metadata = { alternates: { canonical: "/" } };
 
 export default async function Home() {
   const { items } = await listPublicScholarships();
@@ -29,6 +33,7 @@ export default async function Home() {
           <SentenceSearch />
         </div>
       </section>
+      <div className="mx-auto max-w-page px-4"><AdBanner /></div>
 
       <div className="mx-auto max-w-page space-y-14 px-4 py-12">
         <p className="text-ink">
@@ -48,8 +53,34 @@ export default async function Home() {
           <ul className="mt-3 grid grid-cols-2 gap-x-6 sm:grid-cols-3 lg:grid-cols-6">
             {DESTINATIONS.map((c) => (
               <li key={c.code} className="border-b border-paper-line">
-                <Link href={`/universities?country=${c.code}`} className="block py-2 text-ink hover:text-route">{c.name}</Link>
+                <Link href={`/universities/${c.slug}`} className="block py-2 text-ink hover:text-route">{c.name}</Link>
               </li>
+            ))}
+          </ul>
+        </section>
+
+        <section aria-labelledby="tools" className="rounded-md bg-ink p-6 text-white sm:p-8">
+          <h2 id="tools" className="font-serif text-2xl">Prepare your application</h2>
+          <ul className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              ["/tools/cv", "Assess my CV", "Strengths, missing information and potentially relevant verified scholarships."],
+              ["/tools/transcript", "Check my transcript", "Read your GPA and courses and compare with a published minimum."],
+              ["/tools/motivation-letter", "Motivation letter", "A draft built only from your own facts, with gaps marked."],
+              ["/tools/tracker", "Application tracker", "Deadlines, statuses and documents, saved in your browser."],
+            ].map(([href, t, d]) => (
+              <li key={href}><Link href={href} className="font-medium underline-offset-2 hover:underline">{t}</Link><p className="mt-1 text-sm text-white/75">{d}</p></li>
+            ))}
+          </ul>
+        </section>
+
+        <section aria-labelledby="guides">
+          <div className="flex items-baseline justify-between gap-4">
+            <h2 id="guides" className="font-serif text-2xl text-ink">Guides</h2>
+            <Link href="/guides" className="text-sm text-route underline underline-offset-2">All guides</Link>
+          </div>
+          <ul className="mt-3 grid gap-x-8 sm:grid-cols-2">
+            {GUIDES.slice(0, 6).map((g) => (
+              <li key={g.slug} className="border-b border-paper-line"><Link href={`/guides/${g.slug}`} className="block py-2 text-ink hover:text-route">{g.title}</Link></li>
             ))}
           </ul>
         </section>

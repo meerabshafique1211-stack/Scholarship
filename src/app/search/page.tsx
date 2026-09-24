@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ResponsiveAd } from "@/components/ads/AdSlot";
 import { EmptyState } from "@/components/EmptyState";
 import { FilterForm } from "@/components/FilterForm";
 import { ScholarshipCard } from "@/components/ScholarshipCard";
@@ -11,7 +12,7 @@ import { countByUniversityDomain, listPublicScholarships } from "@/lib/scholarsh
 import { searchUniversities } from "@/lib/universities";
 import { paramsToFilters, withParams } from "@/lib/url-state";
 
-export const metadata: Metadata = { title: "Search verified scholarships and universities" };
+export const metadata: Metadata = { title: "Search verified scholarships and universities", alternates: { canonical: "/search" } };
 
 const PAGE_SIZE = 30;
 
@@ -67,7 +68,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
             {f.funding !== "none" && (scholarships.length === 0 ? (
               <div className="mt-4">
                 <EmptyState
-                  title="No verified scholarships found for your current filters."
+                  title="No verified scholarships found for your selected criteria."
                   links={[
                     { href: withParams("/search", { ...base, country: [] }), label: "Change country" },
                     { href: withParams("/search", { ...base, degree: null }), label: "Change degree" },
@@ -79,8 +80,11 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
               </div>
             ) : (
               <ul className="mt-4 space-y-4">
-                {scholarships.map(({ s, status }) => (
-                  <li key={s.id}><ScholarshipCard s={s} status={status} citizenship={f.citizenship} /></li>
+                {scholarships.map(({ s, status }, i) => (
+                  <li key={s.id}>
+                    <ScholarshipCard s={s} status={status} citizenship={f.citizenship} />
+                    {i === 2 && scholarships.length > 4 && <ResponsiveAd />}
+                  </li>
                 ))}
               </ul>
             ))}
