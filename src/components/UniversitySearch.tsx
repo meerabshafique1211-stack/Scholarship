@@ -94,7 +94,7 @@ export function UniversitySearch({
       <div className="mt-6" aria-live="polite" aria-busy={state.kind === "loading"}>
         {state.kind === "idle" && <p className="text-ink-soft">Type at least 2 letters of a university name, or choose a country.</p>}
 
-              {state.kind === "loading" && (
+        {state.kind === "loading" && (
           <div>
             <p className="mb-3 text-ink-soft">Finding universities...</p>
             <ul className="space-y-3" aria-label="Loading">
