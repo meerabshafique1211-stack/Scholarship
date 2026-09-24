@@ -28,6 +28,9 @@ const NAV = [
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${plex.variable} ${newsreader.variable}`}>
+      <head>
+        <AdSenseScript />
+      </head>
       <body className="min-h-screen bg-paper font-sans text-ink antialiased">
         <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-ink focus:px-3 focus:py-2 focus:text-white">Skip to content</a>
         <header className="border-b border-paper-line">
@@ -50,7 +53,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </nav>
           </div>
         </footer>
-        <AdSenseScript />
       </body>
     </html>
   );

@@ -6,8 +6,7 @@ declare global {
   interface Window { adsbygoogle?: unknown[] }
 }
 
-const CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID ?? "";
-export const adsEnabled = /^ca-pub-\d{10,20}$/.test(CLIENT);
+import { ADSENSE_CLIENT as CLIENT, adsenseValid as adsEnabled } from "@/lib/adsense";
 
 type Variant = "banner" | "responsive" | "in-article" | "sidebar";
 
