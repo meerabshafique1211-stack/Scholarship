@@ -64,7 +64,7 @@ export async function listPublicScholarships(): Promise<PublicScholarships> {
     return { items: rows.map(toView), connected: true, error: null };
   } catch (e) {
     console.error("[scholarships] read failed:", e);
-    return { items: [], connected: true, error: "Scholarship data could not be loaded right now." };
+    return { items: [], connected: true, error: null }; // logged above; public pages show the normal empty state
   }
 }
 

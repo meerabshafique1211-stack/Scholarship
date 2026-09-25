@@ -13,10 +13,9 @@ export const revalidate = 3600;
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = siteUrl();
   const now = new Date();
-  const staticPages = ["", "/search", "/universities", "/scholarships", "/guides", "/tools", "/tools/cv", "/tools/transcript", "/tools/motivation-letter", "/about", "/contact", "/privacy", "/terms"]
+  const staticPages = ["", "/search", "/universities", "/scholarships", "/guides", "/tools", "/tools/cv", "/tools/transcript", "/tools/motivation-letter", "/about", "/contact", "/privacy", "/terms", "/disclaimer", "/editorial-policy"]
     .map((p) => ({ url: `${base}${p}`, lastModified: now }));
   const guides = GUIDES.map((g) => ({ url: `${base}/guides/${g.slug}`, lastModified: new Date(g.updated) }));
-  const countries = DESTINATIONS.map((c) => ({ url: `${base}/universities/${c.slug}`, lastModified: now }));
 
   const { items } = await listPublicScholarships();
   const current = filterScholarships(items, EMPTY_FILTERS).map((r) => r.s);
@@ -28,5 +27,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const universities = Array.from(new Set(current.filter((s) => s.university).map((s) => universityId(s.countryCode, s.university!.officialDomain))))
     .map((id) => ({ url: `${base}/universities/${id}`, lastModified: now }));
 
-  return [...staticPages, ...guides, ...countries, ...scholarshipCountries, ...scholarships, ...universities];
+  return [...staticPages, ...guides, ...scholarshipCountries, ...scholarships, ...universities];
 }

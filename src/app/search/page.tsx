@@ -12,7 +12,15 @@ import { countByUniversityDomain, listPublicScholarships } from "@/lib/scholarsh
 import { searchUniversities } from "@/lib/universities";
 import { paramsToFilters, withParams } from "@/lib/url-state";
 
-export const metadata: Metadata = { title: "Search verified scholarships and universities", alternates: { canonical: "/search" } };
+export async function generateMetadata({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }): Promise<Metadata> {
+  const hasParams = Object.keys(await searchParams).length > 0;
+  return {
+    title: "Search verified scholarships and universities",
+    description: "Filter verified scholarships by country, degree, field, funding and application status, and find real universities.",
+    alternates: { canonical: "/search" },
+    robots: hasParams ? { index: false, follow: true } : undefined,
+  };
+}
 
 const PAGE_SIZE = 30;
 

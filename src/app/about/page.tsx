@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { contactEmail, publisherName } from "@/lib/site";
 
 export const metadata: Metadata = { title: "About", description: "How Global Scholarship Finder sources and verifies university and scholarship information.", alternates: { canonical: "/about" } };
 
 export default function About() {
+  const owner = publisherName();
+  const email = contactEmail();
   return (
     <article className="mx-auto max-w-3xl space-y-6 px-4 pb-16 pt-8 leading-relaxed text-ink">
       <h1 className="font-serif text-4xl">About this site</h1>
@@ -18,7 +21,10 @@ export default function About() {
       <section><h2 className="font-serif text-2xl">What we don&apos;t do</h2>
         <p className="mt-2">We don&apos;t publish sample or placeholder scholarships, guess deadlines from previous years, invent rankings or employment statistics, or promise that anyone will win a scholarship.</p>
       </section>
-      <p><Link className="text-route underline" href="/contact">Report something outdated</Link></p>
+      <section><h2 className="font-serif text-2xl">Who runs this site</h2>
+        <p className="mt-2">{owner ? <>Global Scholarship Finder is run by {owner}.</> : "Publisher details will be listed here."}{email && <> Contact: <a className="text-route underline" href={`mailto:${email}`}>{email}</a>.</>}</p>
+      </section>
+      <p><Link className="text-route underline" href="/editorial-policy">Editorial and verification policy</Link> · <Link className="text-route underline" href="/contact">Report something outdated</Link></p>
     </article>
   );
 }

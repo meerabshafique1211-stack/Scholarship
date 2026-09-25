@@ -9,3 +9,4 @@ export function siteUrl(): string {
 
 export const SITE_NAME = "Global Scholarship Finder";
 export const contactEmail = () => process.env.NEXT_PUBLIC_CONTACT_EMAIL || null;
+export const publisherName = () => process.env.NEXT_PUBLIC_PUBLISHER_NAME || null; // real person or organisation running the site

@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { UniversityCard } from "./UniversityCard";
-import { ResponsiveAd } from "./ads/AdSlot";
 import type { UniversityView } from "@/lib/types";
 
 interface ApiResult {
@@ -129,12 +128,7 @@ export function UniversitySearch({
           <>
             <p className="text-sm text-ink-soft">{state.data.total} {state.data.total === 1 ? "university" : "universities"} found</p>
             <div className="mt-2 border-t border-paper-line">
-              {state.items.map((u, i) => (
-                <div key={u.id}>
-                  <UniversityCard u={u} />
-                  {i === 5 && state.items.length > 8 && <ResponsiveAd />}
-                </div>
-              ))}
+              {state.items.map((u) => <UniversityCard key={u.id} u={u} />)}
             </div>
             {state.items.length < state.data.total && (
               <button type="button" disabled={loadingMore} onClick={() => run(query, country, state.data.page + 1)}

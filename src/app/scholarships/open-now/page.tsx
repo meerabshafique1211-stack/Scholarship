@@ -5,7 +5,7 @@ import { filterScholarships } from "@/lib/filter";
 import { listPublicScholarships } from "@/lib/scholarships";
 import { EMPTY_FILTERS } from "@/lib/types";
 
-export const metadata: Metadata = { title: "Verified scholarships open now" };
+export const metadata: Metadata = { title: "Verified scholarships open now", description: "Scholarships whose official application window is open today, each verified against its official source.", alternates: { canonical: "/scholarships/open-now" } };
 export const dynamic = "force-dynamic";
 
 export default async function OpenNowPage() {

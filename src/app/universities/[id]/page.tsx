@@ -28,6 +28,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: `Universities in ${c.name}: official websites and verified scholarships`,
       description: `Real universities in ${c.name} from the open Hipo dataset, with official websites and any scholarships we have verified.`,
       alternates: { canonical: `/universities/${c.slug}` },
+      robots: { index: false, follow: true },
     };
   }
   const [{ university: u }, pub] = await Promise.all([getUniversityById(id), listPublicScholarships()]);
@@ -71,10 +72,7 @@ async function CountryUniversities({ code, name, slug, page }: { code: string; n
         <>
           <div className="mt-6 border-t border-paper-line">
             {slice.map((u, i) => (
-              <div key={u.id}>
-                <UniversityCard u={u} scholarshipCount={u.domains.reduce((n, d) => n + (counts.get(d) ?? 0), 0)} />
-                {i === 7 && <ResponsiveAd />}
-              </div>
+              <UniversityCard key={u.id} u={u} scholarshipCount={u.domains.reduce((n, d) => n + (counts.get(d) ?? 0), 0)} />
             ))}
           </div>
           {pages > 1 && (
@@ -133,7 +131,7 @@ async function UniversityDetail({ id }: { id: string }) {
         )}
       </section>
 
-      <ResponsiveAd />
+      {mine.length > 0 && <ResponsiveAd />}
 
       <section aria-labelledby="research" className="mt-12 grid gap-8 lg:grid-cols-2">
         <div>

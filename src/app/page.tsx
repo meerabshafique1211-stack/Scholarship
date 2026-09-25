@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { AdBanner } from "@/components/ads/AdSlot";
 import { GUIDES } from "@/lib/guides";
+import { JsonLd } from "@/components/JsonLd";
+import { SITE_NAME, siteUrl } from "@/lib/site";
 import { SentenceSearch } from "@/components/SentenceSearch";
 import { StatusBadge } from "@/components/Badges";
 import { DESTINATIONS } from "@/lib/reference";
@@ -20,8 +22,17 @@ export default async function Home() {
   const open = current.filter((r) => r.status === "OPEN").slice(0, 5);
   const upcoming = current.filter((r) => r.status === "UPCOMING").slice(0, 5);
 
+  const base = siteUrl();
   return (
     <>
+      <JsonLd data={{
+        "@context": "https://schema.org",
+        "@graph": [
+          { "@type": "WebSite", "@id": `${base}/#website`, url: base, name: SITE_NAME,
+            potentialAction: { "@type": "SearchAction", target: `${base}/search?q={search_term_string}`, "query-input": "required name=search_term_string" } },
+          { "@type": "Organization", "@id": `${base}/#org`, name: SITE_NAME, url: base },
+        ],
+      }} />
       <section className="border-b border-paper-line bg-paper-tint">
         <div className="mx-auto max-w-page px-4 py-12 sm:py-16">
           <h1 className="font-serif text-4xl leading-[1.1] text-ink sm:text-6xl">

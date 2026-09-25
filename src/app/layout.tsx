@@ -49,7 +49,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <p>University data: <a className="underline" href="https://github.com/Hipo/university-domains-list" target="_blank" rel="noopener noreferrer">Hipo university-domains list</a>. Research data: <a className="underline" href="https://openalex.org" target="_blank" rel="noopener noreferrer">OpenAlex</a>.</p>
             </div>
             <nav aria-label="Site" className="flex flex-wrap gap-x-4 gap-y-1">
-              {[["/about", "About"], ["/contact", "Contact"], ["/privacy", "Privacy"], ["/terms", "Terms"], ["/guides", "Guides"]].map(([h, l]) => <Link key={h} href={h} className="hover:text-ink">{l}</Link>)}
+              {[["/about", "About"], ["/editorial-policy", "Editorial policy"], ["/contact", "Contact"], ["/privacy", "Privacy"], ["/terms", "Terms"], ["/disclaimer", "Disclaimer"]].map(([h, l]) => <Link key={h} href={h} className="hover:text-ink">{l}</Link>)}
             </nav>
           </div>
         </footer>

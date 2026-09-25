@@ -5,7 +5,7 @@ import { filterScholarships } from "@/lib/filter";
 import { listPublicScholarships } from "@/lib/scholarships";
 import { EMPTY_FILTERS } from "@/lib/types";
 
-export const metadata: Metadata = { title: "Verified upcoming scholarships" };
+export const metadata: Metadata = { title: "Verified upcoming scholarships", description: "Verified scholarships whose official opening date for the new cycle has been published.", alternates: { canonical: "/scholarships/upcoming" } };
 export const dynamic = "force-dynamic";
 
 export default async function UpcomingPage() {

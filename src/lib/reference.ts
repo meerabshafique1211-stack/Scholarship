@@ -8,7 +8,8 @@ export interface Country {
 }
 
 const c = (code: string, name: string, hipoName = name): Country => ({
-  code, name, hipoName, slug: name.toLowerCase().replace(/\s+/g, "-"),
+  code, name, hipoName,
+  slug: name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, "-"), // ASCII-only URLs
 });
 
 export const DESTINATIONS: Country[] = [
