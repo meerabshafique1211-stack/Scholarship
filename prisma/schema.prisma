@@ -43,7 +43,7 @@ model University {
   verificationStatus UniversityStatus @default(IMPORTED)
   lastVerifiedAt     DateTime
   sourceId           String?
-  source             DataSource?      @relation(fields: [sourceId], references: [id])
+  dataSource         DataSource?      @relation(fields: [sourceId], references: [id])
   scholarships       Scholarship[]
   programs           Program[]
   createdAt          DateTime         @default(now())
