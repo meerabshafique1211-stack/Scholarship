@@ -66,3 +66,24 @@ export const STATUS_META: Record<AppStatus, { label: string; tone: "seal" | "rou
   NOT_ANNOUNCED: { label: "Not announced", tone: "caution" },
   UNKNOWN: { label: "Status unclear", tone: "caution" },
 };
+
+/** Whole days from today (UTC) to an official date; null when no date is stored. */
+export function daysUntil(iso: string | null, today: Date = new Date()): number | null {
+  if (!iso) return null;
+  return Math.round((day(iso) - utcDay(today)) / DAY);
+}
+
+/** Countdown text shown only for official dates: "Closes in 5 days", "Opens in 12 days". */
+export function countdownLabel(s: Pick<ScholarshipView, "openingDate" | "deadline">, status: AppStatus, today: Date = new Date()): { text: string; urgent: boolean } | null {
+  if (status === "OPEN") {
+    const d = daysUntil(s.deadline, today);
+    if (d === null || d > 30) return null;
+    return { text: d === 0 ? "Closes today" : `Closes in ${d} day${d === 1 ? "" : "s"}`, urgent: d <= 14 };
+  }
+  if (status === "UPCOMING") {
+    const d = daysUntil(s.openingDate, today);
+    if (d === null || d > 60) return null;
+    return { text: `Opens in ${d} day${d === 1 ? "" : "s"}`, urgent: false };
+  }
+  return null;
+}

@@ -13,7 +13,7 @@ export const revalidate = 3600;
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = siteUrl();
   const now = new Date();
-  const staticPages = ["", "/search", "/universities", "/scholarships", "/guides", "/tools", "/tools/cv", "/tools/transcript", "/tools/motivation-letter", "/about", "/contact", "/privacy", "/terms", "/disclaimer", "/editorial-policy"]
+  const staticPages = ["", "/search", "/universities", "/scholarships", "/deadlines", "/guides", "/tools", "/tools/cv", "/tools/transcript", "/tools/motivation-letter", "/about", "/contact", "/privacy", "/terms", "/disclaimer", "/editorial-policy"]
     .map((p) => ({ url: `${base}${p}`, lastModified: now }));
   const guides = GUIDES.map((g) => ({ url: `${base}/guides/${g.slug}`, lastModified: new Date(g.updated) }));
 

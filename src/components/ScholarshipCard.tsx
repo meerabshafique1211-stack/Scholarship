@@ -4,7 +4,7 @@ import { StatusBadge, VerifiedSource } from "./Badges";
 import { eligibleFor } from "@/lib/filter";
 import { DEGREE_LABEL, FUNDING_LABEL, formatDate, formatIntake, fundingHeadline, hostOf } from "@/lib/format";
 import { countryName } from "@/lib/reference";
-import { canApplyNow } from "@/lib/status";
+import { canApplyNow, countdownLabel } from "@/lib/status";
 import type { AppStatus, ScholarshipView } from "@/lib/types";
 
 const btn = "inline-flex items-center justify-center rounded-md px-3.5 py-2 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-route";
@@ -12,6 +12,7 @@ const btn = "inline-flex items-center justify-center rounded-md px-3.5 py-2 text
 export function ScholarshipCard({ s, status, citizenship }: { s: ScholarshipView; status: AppStatus; citizenship: string | null }) {
   const elig = eligibleFor(s, citizenship);
   const apply = canApplyNow(s, status);
+  const countdown = countdownLabel(s, status);
   return (
     <article className="rounded-md border border-paper-line bg-paper p-4 sm:p-5">
       <p className="text-xs text-ink-soft">
@@ -46,6 +47,7 @@ export function ScholarshipCard({ s, status, citizenship }: { s: ScholarshipView
 
         <aside className="flex flex-col gap-2 border-t border-paper-line pt-3 text-sm md:border-l md:border-t-0 md:pl-4 md:pt-0">
           <StatusBadge status={status} />
+          {countdown && <p className={`text-sm font-semibold ${countdown.urgent ? "text-caution" : "text-route"}`}>{countdown.text}</p>}
           {s.deadline ? (
             <div><p className="text-ink-soft">Official deadline</p><p className="font-semibold text-ink">{formatDate(s.deadline)}</p></div>
           ) : (

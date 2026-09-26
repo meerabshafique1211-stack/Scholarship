@@ -20,7 +20,7 @@ const NAV = [
   ["/search", "Search"],
   ["/universities", "Universities"],
   ["/scholarships", "Scholarships"],
-  ["/scholarships/open-now", "Open now"],
+  ["/deadlines", "Deadlines"],
   ["/tools", "Tools"],
   ["/guides", "Guides"],
 ] as const;

@@ -21,6 +21,7 @@ export default async function Home() {
   const current = filterScholarships(items, EMPTY_FILTERS);
   const open = current.filter((r) => r.status === "OPEN").slice(0, 5);
   const upcoming = current.filter((r) => r.status === "UPCOMING").slice(0, 5);
+  const recent = [...current].sort((a, b) => (b.s.lastVerifiedAt ?? "").localeCompare(a.s.lastVerifiedAt ?? "")).slice(0, 5);
 
   const base = siteUrl();
   return (
@@ -47,10 +48,13 @@ export default async function Home() {
       <div className="mx-auto max-w-page px-4"><AdBanner /></div>
 
       <div className="mx-auto max-w-page space-y-14 px-4 py-12">
-        <p className="text-ink">
-          <span className="font-serif text-2xl">{current.length}</span>{" "}
-          verified scholarship{current.length === 1 ? "" : "s"} in the database right now.
-        </p>
+        {current.length > 0 && (
+          <p className="text-ink">
+            <span className="font-serif text-2xl">{current.length}</span>{" "}
+            verified scholarship{current.length === 1 ? "" : "s"}, each checked against its official source.{" "}
+            <Link href="/deadlines" className="text-route underline">See deadlines</Link>
+          </p>
+        )}
 
         <div className="grid gap-10 lg:grid-cols-2">
           <ShortList title="Verified and open now" href="/scholarships/open-now" rows={open}
@@ -58,6 +62,9 @@ export default async function Home() {
           <ShortList title="Opening soon" href="/scholarships/upcoming" rows={upcoming}
             empty="No verified upcoming scholarships yet." />
         </div>
+        {recent.length > 0 && (
+          <ShortList title="Recently verified" href="/scholarships" rows={recent} empty="" />
+        )}
 
         <section aria-labelledby="countries">
           <h2 id="countries" className="font-serif text-2xl text-ink">Universities by country</h2>
