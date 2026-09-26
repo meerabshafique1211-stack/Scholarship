@@ -8,6 +8,7 @@ export function AdminNav() {
         <Link href="/admin/scholarships" className="font-medium text-ink">Scholarships</Link>
         <Link href="/admin/scholarships/new" className="text-ink">Add scholarship</Link>
         <Link href="/admin/universities" className="text-ink">Universities</Link>
+        <Link href="/admin/sources" className="text-ink">Data sources</Link>
       </nav>
       <form action={logout}><button className="text-route underline">Sign out</button></form>
     </div>

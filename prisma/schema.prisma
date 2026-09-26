@@ -42,7 +42,10 @@ model University {
   researchSourceUrl  String?
   verificationStatus UniversityStatus @default(IMPORTED)
   lastVerifiedAt     DateTime
+  sourceId           String?
+  source             DataSource?      @relation(fields: [sourceId], references: [id])
   scholarships       Scholarship[]
+  programs           Program[]
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
 
@@ -143,6 +146,8 @@ model Scholarship {
   sourceContentHash      String?                 // fingerprint of the official page at verification time
   sourceLastCheckedAt    DateTime?               // last automatic check (never counts as verification)
   isDemo                 Boolean                 @default(false) // must be false for public results
+  sourceId               String?
+  source                 DataSource?             @relation(fields: [sourceId], references: [id])
 
   sources                ScholarshipSource[]
   logs                   VerificationLog[]
@@ -178,4 +183,143 @@ model VerificationLog {
   createdAt     DateTime    @default(now())
 
   @@index([scholarshipId, createdAt])
+}
+
+// ───────────────────────── Phase 1: data foundation ─────────────────────────
+
+enum RecordVerification {
+  VERIFIED           // every published field checked against the official source
+  PARTIALLY_VERIFIED // some fields checked; unchecked fields are shown as "not verified"
+  NEEDS_REVIEW       // imported or changed; admin only
+  EXPIRED            // past cycle / withdrawn
+  UNKNOWN
+}
+
+enum DataSourceType {
+  OFFICIAL_API
+  OFFICIAL_DATASET
+  OFFICIAL_WEBSITE
+  GOVERNMENT
+  SCHOLARSHIP_PROVIDER
+  APPROVED_SECONDARY
+  MANUAL
+}
+
+enum DataSourceStatus {
+  ACTIVE
+  PLANNED
+  PAUSED
+  ERROR
+  BLOCKED_LICENSE // licence does not allow our use (e.g. needs written permission)
+}
+
+enum CommercialUse {
+  ALLOWED
+  NEEDS_PERMISSION
+  NOT_ALLOWED
+  UNKNOWN
+}
+
+enum SyncFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  MANUAL
+}
+
+// Registry of every place data comes from, with its licence. Connectors read this.
+model DataSource {
+  id             String           @id
+  name           String
+  sourceType     DataSourceType
+  apiUrl         String?
+  websiteUrl     String
+  license        String?
+  attribution    String?
+  commercialUse  CommercialUse    @default(UNKNOWN)
+  coverage       String?
+  providesFields String[]
+  syncFrequency  SyncFrequency    @default(MANUAL)
+  lastSyncAt     DateTime?
+  status         DataSourceStatus @default(PLANNED)
+  lastError      String?
+  notes          String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  programs       Program[]
+  changes        RecordChange[]
+  scholarships   Scholarship[]
+  universities   University[]
+}
+
+model Program {
+  id                     String             @id @default(cuid())
+  universityId           String
+  university             University         @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  name                   String
+  slug                   String
+  degreeLevel            DegreeLevel
+  subjects               String[]
+  languages              String[]
+  durationMonths         Int?
+  tuitionAmount          Decimal?           @db.Decimal(12, 2)
+  tuitionCurrency        String?            @db.Char(3)
+  tuitionPeriod          String?            // "YEAR" | "TOTAL" | "SEMESTER"
+  tuitionAppliesTo       String?            // "INTERNATIONAL" | "DOMESTIC" | "ALL" | "UNKNOWN"
+  intakes                String[]
+  applicationFeeText     String?
+  englishRequirementText String?
+  ieltsMin               Decimal?           @db.Decimal(3, 1)
+  toeflMin               Int?
+  gpaRequirementText     String?
+  officialUrl            String
+  applicationUrl         String?
+  sourceId               String?
+  source                 DataSource?        @relation(fields: [sourceId], references: [id])
+  sourceUrl              String
+  verificationStatus     RecordVerification @default(NEEDS_REVIEW)
+  lastVerifiedAt         DateTime?
+  lastCheckedAt          DateTime?
+  deadlines              ProgramDeadline[]
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  @@unique([universityId, slug])
+  @@index([degreeLevel])
+  @@index([verificationStatus])
+}
+
+// Official deadlines only. A cycle without a published date has no row here.
+model ProgramDeadline {
+  id               String   @id @default(cuid())
+  programId        String
+  program          Program  @relation(fields: [programId], references: [id], onDelete: Cascade)
+  intake           String   // e.g. "2027-10"
+  label            String   // e.g. "Application deadline (non-EU)"
+  applicantGroup   String   @default("ALL")
+  deadline         DateTime
+  deadlineTimeText String?  // e.g. "23:59 CET"
+  sourceUrl        String
+  lastVerifiedAt   DateTime
+  createdAt        DateTime @default(now())
+
+  @@index([programId])
+  @@index([deadline])
+}
+
+// Field-level change history for any record (tuition, deadlines, requirements...).
+model RecordChange {
+  id         String      @id @default(cuid())
+  entityType String      // "Program" | "Scholarship" | "University" | "ProgramDeadline"
+  entityId   String
+  field      String
+  oldValue   String?
+  newValue   String?
+  sourceId   String?
+  source     DataSource? @relation(fields: [sourceId], references: [id])
+  detectedAt DateTime    @default(now())
+  reviewedAt DateTime?
+  actor      String      // "cron:<connector>" | "admin"
+
+  @@index([entityType, entityId, detectedAt], map: "RecordChange_entity_idx")
 }
